@@ -1,0 +1,62 @@
+# Compose para o gerenciador Docker da Hostinger (limite de 8 KB).
+# Constrói a imagem direto do repositório no GitHub (o repositório precisa estar acessível ao VPS).
+# Variáveis no "environment" do projeto: PUBLIC_HOST, MCP_SECRET, BLING_CLIENT_ID, BLING_CLIENT_SECRET, EXPECTED_CNPJ
+name: mio-bling-mcp
+
+services:
+  mcp:
+    build:
+      context: https://github.com/luizmoraesguilherme/mio-bling-mcp.git#main
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      DATA_DIR: /data
+      PUBLIC_URL: https://${PUBLIC_HOST}
+      MCP_SECRET: ${MCP_SECRET}
+      BLING_CLIENT_ID: ${BLING_CLIENT_ID}
+      BLING_CLIENT_SECRET: ${BLING_CLIENT_SECRET}
+      EXPECTED_CNPJ: ${EXPECTED_CNPJ}
+    volumes:
+      - mcp-data:/data
+    networks: [mcpnet]
+    mem_limit: 256m
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [mcp]
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [mcpnet]
+    mem_limit: 128m
+
+configs:
+  caddyfile:
+    content: |
+      {$$PUBLIC_HOST} {
+          encode gzip
+          @permitido path /mcp /mcp/* /oauth/start /oauth/callback /health
+          handle @permitido {
+              reverse_proxy mcp:3000
+          }
+          handle {
+              respond "not found" 404
+          }
+      }
+
+volumes:
+  mcp-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  mcpnet:
