@@ -1,13 +1,14 @@
-# Compose para o gerenciador Docker da Hostinger (limite de 8 KB).
-# Constrói a imagem direto do repositório no GitHub (o repositório precisa estar acessível ao VPS).
+# Compose para o gerenciador Docker da Hostinger (limite de 8 KB, sem build e sem configs).
+# O mcp baixa o server.js do GitHub fixado num commit e confere o SHA-256 antes de rodar.
+# Para atualizar: troque COMMIT e SHA256 pelo commit novo e pelo hash do server.js dele.
 # Variáveis no "environment" do projeto: PUBLIC_HOST, MCP_SECRET, BLING_CLIENT_ID, BLING_CLIENT_SECRET, EXPECTED_CNPJ
 name: mio-bling-mcp
 
 services:
   mcp:
-    build:
-      context: https://github.com/luizmoraesguilherme/mio-bling-mcp.git#main
+    image: node:22-alpine
     restart: unless-stopped
+    working_dir: /app
     environment:
       PORT: "3000"
       DATA_DIR: /data
@@ -16,6 +17,15 @@ services:
       BLING_CLIENT_ID: ${BLING_CLIENT_ID}
       BLING_CLIENT_SECRET: ${BLING_CLIENT_SECRET}
       EXPECTED_CNPJ: ${EXPECTED_CNPJ}
+      COMMIT: cda8951b4b395b6bc8c76f3bc7b88acde4cc1615
+      SHA256: 58ca7c10b93123b2a9413e0232707223a3c83390222503b9a1c2f5210c84d5ad
+    command:
+      - sh
+      - -c
+      - >-
+        wget -qO /app/server.js https://raw.githubusercontent.com/luizmoraesguilherme/mio-bling-mcp/$$COMMIT/server.js &&
+        echo "$$SHA256  /app/server.js" | sha256sum -c - &&
+        exec node /app/server.js
     volumes:
       - mcp-data:/data
     networks: [mcpnet]
@@ -25,33 +35,15 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on: [mcp]
-    environment:
-      PUBLIC_HOST: ${PUBLIC_HOST}
+    command: caddy reverse-proxy --from ${PUBLIC_HOST} --to mcp:3000
     ports:
       - "80:80"
       - "443:443"
-    configs:
-      - source: caddyfile
-        target: /etc/caddy/Caddyfile
     volumes:
       - caddy-data:/data
       - caddy-config:/config
     networks: [mcpnet]
     mem_limit: 128m
-
-configs:
-  caddyfile:
-    content: |
-      {$$PUBLIC_HOST} {
-          encode gzip
-          @permitido path /mcp /mcp/* /oauth/start /oauth/callback /health
-          handle @permitido {
-              reverse_proxy mcp:3000
-          }
-          handle {
-              respond "not found" 404
-          }
-      }
 
 volumes:
   mcp-data:
