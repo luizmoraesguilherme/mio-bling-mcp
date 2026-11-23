@@ -1,0 +1,17 @@
+{$PUBLIC_HOST} {
+	encode gzip
+
+	@permitido path /mcp /mcp/* /oauth/start /oauth/callback /health
+	handle @permitido {
+		reverse_proxy mcp:3000
+	}
+
+	handle {
+		respond "not found" 404
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

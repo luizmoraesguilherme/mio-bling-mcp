@@ -1,0 +1,12 @@
+{
+  "name": "mio-bling-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servidor MCP para devolução de NF-e no Bling da Mio Peças",
+  "main": "server.js",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.js",
+    "compose:deploy": "node scripts/gerar-compose.js"
+  }
+}

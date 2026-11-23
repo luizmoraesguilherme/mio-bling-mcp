@@ -1,0 +1,40 @@
+# Uso local / VPS com o repositório clonado: docker compose up -d --build
+# Projeto isolado: rede e volumes próprios, sem relação com o bot-portaria.
+name: mio-bling-mcp
+
+services:
+  mcp:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PUBLIC_URL: https://${PUBLIC_HOST}
+      DATA_DIR: /data
+    volumes:
+      - mcp-data:/data
+    networks: [mcpnet]
+    mem_limit: 256m
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [mcp]
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [mcpnet]
+    mem_limit: 128m
+
+volumes:
+  mcp-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  mcpnet:

@@ -1,0 +1,585 @@
+# GERADO por scripts/gerar-compose.js — não edite à mão.
+# Projeto isolado: rede e volumes próprios, sem relação com o bot-portaria.
+# Variáveis (definidas no "environment" do projeto na Hostinger):
+#   PUBLIC_HOST, MCP_SECRET, BLING_CLIENT_ID, BLING_CLIENT_SECRET, EXPECTED_CNPJ
+name: mio-bling-mcp
+
+services:
+  mcp:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "/app/server.js"]
+    environment:
+      PORT: "3000"
+      DATA_DIR: /data
+      PUBLIC_URL: https://${PUBLIC_HOST}
+      MCP_SECRET: ${MCP_SECRET}
+      BLING_CLIENT_ID: ${BLING_CLIENT_ID}
+      BLING_CLIENT_SECRET: ${BLING_CLIENT_SECRET}
+      EXPECTED_CNPJ: ${EXPECTED_CNPJ}
+    configs:
+      - source: server_js
+        target: /app/server.js
+    volumes:
+      - mcp-data:/data
+    networks: [mcpnet]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [mcp]
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [mcpnet]
+    mem_limit: 128m
+
+configs:
+  server_js:
+    content: |
+      // mio-bling-mcp — servidor MCP (Streamable HTTP) para devolução de NF-e no Bling da Mio Peças.
+      // Sem dependências: Node 22+ (fetch nativo). Um arquivo só, de propósito.
+      'use strict';
+
+      const http = require('node:http');
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const crypto = require('node:crypto');
+
+      // ---------------------------------------------------------------------------
+      // Configuração
+      // ---------------------------------------------------------------------------
+      const CFG = {
+        port: Number(process.env.PORT || 3000),
+        publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$$/, ''),
+        mcpSecret: process.env.MCP_SECRET || '',
+        clientId: process.env.BLING_CLIENT_ID || '',
+        clientSecret: process.env.BLING_CLIENT_SECRET || '',
+        apiBase: (process.env.BLING_API_BASE || 'https://api.bling.com.br/Api/v3').replace(/\/$$/, ''),
+        authorizeUrl: process.env.BLING_AUTHORIZE_URL || 'https://www.bling.com.br/Api/v3/oauth/authorize',
+        // CNPJ esperado: impede operar por engano em outra empresa (ex.: Dafera).
+        expectedCnpj: (process.env.EXPECTED_CNPJ || '').replace(/\D/g, ''),
+        dataDir: process.env.DATA_DIR || path.join(__dirname, 'data'),
+      };
+      const TOKEN_FILE = path.join(CFG.dataDir, 'tokens.json');
+      const AUDIT_FILE = path.join(CFG.dataDir, 'auditoria.log');
+
+      if (!CFG.mcpSecret || CFG.mcpSecret.length < 24) {
+        console.error('MCP_SECRET ausente ou curto (mínimo 24 caracteres). Abortando.');
+        process.exit(1);
+      }
+      fs.mkdirSync(CFG.dataDir, { recursive: true });
+
+      function audit(evento, dados) {
+        const linha = JSON.stringify({ quando: new Date().toISOString(), evento, ...dados });
+        fs.appendFileSync(AUDIT_FILE, linha + '\n');
+        console.log('[auditoria]', linha);
+      }
+
+      function safeEqual(a, b) {
+        const x = Buffer.from(String(a));
+        const y = Buffer.from(String(b));
+        return x.length === y.length && crypto.timingSafeEqual(x, y);
+      }
+
+      // ---------------------------------------------------------------------------
+      // Tokens OAuth do Bling (JWT + refresh de 30 dias), persistidos em volume
+      // ---------------------------------------------------------------------------
+      let tokens = null;
+      try { tokens = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8')); } catch { tokens = null; }
+
+      function saveTokens(t) {
+        tokens = { ...t, obtained_at: Date.now() };
+        fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens), { mode: 0o600 });
+      }
+
+      async function tokenRequest(form) {
+        const basic = Buffer.from(`$${CFG.clientId}:$${CFG.clientSecret}`).toString('base64');
+        const res = await fetch(`$${CFG.apiBase}/oauth/token`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic $${basic}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: '1.0',
+            'enable-jwt': '1',
+          },
+          body: new URLSearchParams(form).toString(),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.access_token) {
+          throw new Error(`Falha no token do Bling ($${res.status}): $${JSON.stringify(body).slice(0, 300)}`);
+        }
+        saveTokens(body);
+      }
+
+      let refreshing = null;
+      async function refreshTokens() {
+        if (!tokens?.refresh_token) throw new Error('Bling não autorizado. Abra /oauth/start para autorizar.');
+        if (!refreshing) {
+          refreshing = tokenRequest({ grant_type: 'refresh_token', refresh_token: tokens.refresh_token })
+            .finally(() => { refreshing = null; });
+        }
+        return refreshing;
+      }
+
+      async function accessToken() {
+        if (!tokens?.access_token) throw new Error('Bling não autorizado. Abra /oauth/start para autorizar.');
+        const expiraEm = (tokens.obtained_at || 0) + (Number(tokens.expires_in || 0) - 120) * 1000;
+        if (Date.now() > expiraEm) await refreshTokens();
+        return tokens.access_token;
+      }
+
+      // ---------------------------------------------------------------------------
+      // Cliente da API v3 (limite do Bling: 3 req/s)
+      // ---------------------------------------------------------------------------
+      let lastCall = 0;
+      async function throttle() {
+        const wait = lastCall + 350 - Date.now();
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+        lastCall = Date.now();
+      }
+
+      async function bling(method, rota, { query, body } = {}, retried = false) {
+        await throttle();
+        const url = new URL(CFG.apiBase + rota);
+        for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+        const res = await fetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer $${await accessToken()}`,
+            'enable-jwt': '1',
+            Accept: 'application/json',
+            ...(body ? { 'Content-Type': 'application/json' } : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        if (res.status === 401 && !retried) {
+          await refreshTokens();
+          return bling(method, rota, { query, body }, true);
+        }
+        const text = await res.text();
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+        if (!res.ok) {
+          const err = new Error(`Bling $${method} $${rota} → $${res.status}: $${JSON.stringify(json?.error || json).slice(0, 800)}`);
+          err.status = res.status;
+          throw err;
+        }
+        return json;
+      }
+
+      let cnpjVerificado = false;
+      async function garantirEmpresa() {
+        if (cnpjVerificado || !CFG.expectedCnpj) return;
+        const r = await bling('GET', '/empresas/me/dados-basicos');
+        const cnpj = String(r?.data?.cnpj || '').replace(/\D/g, '');
+        if (cnpj !== CFG.expectedCnpj) {
+          throw new Error(`Conta Bling autorizada é de outro CNPJ ($${r?.data?.cnpj}). Operação bloqueada.`);
+        }
+        cnpjVerificado = true;
+      }
+
+      // ---------------------------------------------------------------------------
+      // Regras de devolução
+      // ---------------------------------------------------------------------------
+      const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const round2 = (n) => Math.round(Number(n) * 100) / 100;
+
+      function tipoPessoa(doc) {
+        const d = String(doc || '').replace(/\D/g, '');
+        return d.length === 14 ? 'J' : d.length === 11 ? 'F' : 'E';
+      }
+
+      async function obterNota(idNotaFiscal) {
+        const r = await bling('GET', `/nfe/$${Number(idNotaFiscal)}`);
+        if (!r?.data) throw new Error(`NF-e $${idNotaFiscal} não encontrada.`);
+        return r.data;
+      }
+
+      // Situações do Bling: 5 = Autorizada, 6 = Emitida DANFE (as únicas que admitem devolução).
+      const SITUACOES_VALIDAS = new Set([5, 6]);
+
+      async function montarDevolucao(args) {
+        await garantirEmpresa();
+        const orig = await obterNota(args.idNotaOriginal);
+
+        const problemas = [];
+        if (Number(orig.tipo) !== 1) problemas.push('A nota original não é de saída.');
+        if (!SITUACOES_VALIDAS.has(Number(orig.situacao))) problemas.push(`A nota original está na situação $${orig.situacao}, não autorizada.`);
+        if (!orig.chaveAcesso) problemas.push('A nota original não tem chave de acesso.');
+
+        const itensOrig = Array.isArray(orig.itens) ? orig.itens : [];
+        const pedidos = Array.isArray(args.itens) && args.itens.length
+          ? args.itens
+          : itensOrig.map((i) => ({ codigo: i.codigo, quantidade: i.quantidade })); // devolução total
+
+        const itens = [];
+        for (const p of pedidos) {
+          const o = itensOrig.find((i) => String(i.codigo) === String(p.codigo));
+          if (!o) { problemas.push(`Item $${p.codigo} não existe na nota original.`); continue; }
+          const qtd = Number(p.quantidade);
+          if (!(qtd > 0)) { problemas.push(`Quantidade inválida para $${p.codigo}.`); continue; }
+          if (qtd > Number(o.quantidade)) problemas.push(`Item $${p.codigo}: devolvendo $${qtd}, mas a nota original tem $${o.quantidade}.`);
+          itens.push({
+            codigo: String(o.codigo),
+            descricao: o.descricao,
+            unidade: o.unidade,
+            quantidade: qtd,
+            valor: Number(o.valor),
+            tipo: o.tipo || 'P',
+            classificacaoFiscal: o.classificacaoFiscal,
+            cest: o.cest || undefined,
+            origem: o.origem,
+            pesoBruto: o.pesoBruto,
+            pesoLiquido: o.pesoLiquido,
+            // NT 2025.002-RTC: referência à nota original também por item.
+            documentoReferenciado: { chaveAcesso: orig.chaveAcesso, item: o.numeroItem ?? undefined },
+          });
+        }
+
+        const c = orig.contato || {};
+        const total = round2(itens.reduce((s, i) => s + i.quantidade * i.valor, 0));
+        const dataOperacao = args.dataOperacao || new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 19).replace('T', ' ');
+
+        const corpo = {
+          tipo: 0, // entrada
+          finalidade: 4, // devolução
+          dataOperacao,
+          naturezaOperacao: { id: Number(args.idNaturezaOperacao) },
+          ...(orig.loja?.id ? { loja: { id: orig.loja.id } } : {}),
+          contato: {
+            nome: c.nome,
+            tipoPessoa: c.tipoPessoa || tipoPessoa(c.numeroDocumento),
+            numeroDocumento: c.numeroDocumento,
+            ie: c.ie || undefined,
+            contribuinte: c.contribuinte,
+            telefone: c.telefone || undefined,
+            email: c.email || undefined,
+            endereco: c.endereco
+              ? {
+                  endereco: c.endereco.endereco, numero: c.endereco.numero, complemento: c.endereco.complemento,
+                  bairro: c.endereco.bairro, cep: c.endereco.cep, municipio: c.endereco.municipio, uf: c.endereco.uf,
+                  pais: c.endereco.pais,
+                }
+              : undefined,
+          },
+          documentoReferenciado: {
+            modelo: '55',
+            chaveAcesso: orig.chaveAcesso,
+            numero: String(orig.numero),
+            serie: String(orig.serie),
+            data: String(orig.dataEmissao || '').slice(0, 10),
+          },
+          itens,
+          parcelas: [],
+          observacoes: [
+            `Devolução referente à NF-e $${orig.numero}/$${orig.serie} - chave $${orig.chaveAcesso}.`,
+            args.motivo ? `Motivo: $${args.motivo}.` : '',
+          ].filter(Boolean).join(' '),
+        };
+
+        const resumo = {
+          notaOriginal: { id: orig.id, numero: orig.numero, serie: orig.serie, chave: orig.chaveAcesso, emissao: orig.dataEmissao, situacao: orig.situacao },
+          cliente: { nome: c.nome, documento: c.numeroDocumento },
+          itens: itens.map((i) => ({ codigo: i.codigo, descricao: i.descricao, quantidade: i.quantidade, valorUnitario: brl(i.valor), subtotal: brl(i.quantidade * i.valor) })),
+          totalProdutos: brl(total),
+          naturezaOperacao: args.idNaturezaOperacao,
+          problemas,
+        };
+        return { corpo, resumo, problemas };
+      }
+
+      // ---------------------------------------------------------------------------
+      // Ferramentas MCP
+      // ---------------------------------------------------------------------------
+      const TOOLS = [
+        {
+          name: 'buscar_nota',
+          description: 'Busca NF-e no Bling da Mio pelo número (e série opcional) e devolve id, situação, cliente, total e itens. Use para achar a nota de venda antes de preparar uma devolução.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              numero: { type: 'string', description: 'Número da NF-e, ex.: 019120' },
+              serie: { type: 'string', description: 'Série (padrão 1)' },
+              idNotaFiscal: { type: 'integer', description: 'Alternativa: id interno do Bling' },
+            },
+          },
+          annotations: { readOnlyHint: true },
+        },
+        {
+          name: 'listar_naturezas_operacao',
+          description: 'Lista as naturezas de operação do Bling, para escolher a de "Devolução de venda".',
+          inputSchema: { type: 'object', properties: {} },
+          annotations: { readOnlyHint: true },
+        },
+        {
+          name: 'preparar_devolucao',
+          description:
+            'Monta a NF-e de devolução (entrada, finalidade 4) a partir da nota de venda original. modo="previa" (padrão) só mostra o resumo e o JSON, sem gravar. modo="criar" grava como rascunho no Bling (não transmite à SEFAZ). Sem "itens" = devolução total.',
+          inputSchema: {
+            type: 'object',
+            required: ['idNotaOriginal', 'idNaturezaOperacao'],
+            properties: {
+              idNotaOriginal: { type: 'integer', description: 'id interno no Bling da NF-e de venda' },
+              idNaturezaOperacao: { type: 'integer', description: 'id da natureza "Devolução de venda"' },
+              itens: {
+                type: 'array',
+                description: 'Itens devolvidos (código do produto e quantidade). Omitir = devolução total.',
+                items: { type: 'object', required: ['codigo', 'quantidade'], properties: { codigo: { type: 'string' }, quantidade: { type: 'number' } } },
+              },
+              motivo: { type: 'string' },
+              dataOperacao: { type: 'string', description: 'AAAA-MM-DD HH:MM:SS (padrão: agora, horário de Brasília)' },
+              modo: { type: 'string', enum: ['previa', 'criar'], default: 'previa' },
+            },
+          },
+          annotations: { destructiveHint: false },
+        },
+        {
+          name: 'transmitir_nota',
+          description:
+            'Envia à SEFAZ uma NF-e que já está como rascunho no Bling. IRREVERSÍVEL depois de autorizada. Exige "confirmacao" igual ao número da nota e só deve ser chamada após aprovação explícita do usuário.',
+          inputSchema: {
+            type: 'object',
+            required: ['idNotaFiscal', 'confirmacao'],
+            properties: {
+              idNotaFiscal: { type: 'integer' },
+              confirmacao: { type: 'string', description: 'Número da nota, repetido como confirmação' },
+            },
+          },
+          annotations: { destructiveHint: true },
+        },
+        {
+          name: 'lancar_estoque_nota',
+          description: 'Lança no estoque a entrada da NF-e de devolução (opcionalmente em um depósito). Use só após a nota autorizada e com aprovação.',
+          inputSchema: {
+            type: 'object',
+            required: ['idNotaFiscal'],
+            properties: { idNotaFiscal: { type: 'integer' }, idDeposito: { type: 'integer' } },
+          },
+          annotations: { destructiveHint: false },
+        },
+      ];
+
+      const out = (obj) => ({ content: [{ type: 'text', text: typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2) }] });
+
+      const HANDLERS = {
+        async buscar_nota({ numero, serie, idNotaFiscal }) {
+          await garantirEmpresa();
+          let id = idNotaFiscal;
+          if (!id) {
+            if (!numero) throw new Error('Informe numero ou idNotaFiscal.');
+            const r = await bling('GET', '/nfe', { query: { numero: String(numero).replace(/^0+/, ''), serie: serie || '1' } });
+            const lista = r?.data || [];
+            if (!lista.length) return out(`Nenhuma NF-e número $${numero} série $${serie || '1'}.`);
+            if (lista.length > 1) return out({ aviso: 'Mais de uma nota encontrada; use idNotaFiscal.', notas: lista.map((n) => ({ id: n.id, numero: n.numero, serie: n.serie, tipo: n.tipo, situacao: n.situacao, emissao: n.dataEmissao, contato: n.contato?.nome })) });
+            id = lista[0].id;
+          }
+          const n = await obterNota(id);
+          return out({
+            id: n.id, numero: n.numero, serie: n.serie, tipo: n.tipo === 1 ? 'saída' : 'entrada', finalidade: n.finalidade,
+            situacao: n.situacao, emissao: n.dataEmissao, chave: n.chaveAcesso, valor: brl(n.valorNota),
+            cliente: n.contato?.nome, documento: n.contato?.numeroDocumento, naturezaOperacao: n.naturezaOperacao?.id,
+            itens: (n.itens || []).map((i) => ({ codigo: i.codigo, descricao: i.descricao, quantidade: i.quantidade, valor: brl(i.valor), cfop: i.cfop })),
+          });
+        },
+
+        async listar_naturezas_operacao() {
+          await garantirEmpresa();
+          const r = await bling('GET', '/naturezas-operacoes', { query: { limite: 100 } });
+          return out((r?.data || []).map((n) => ({ id: n.id, descricao: n.descricao, situacao: n.situacao, padrao: n.padrao })));
+        },
+
+        async preparar_devolucao(args) {
+          const { corpo, resumo, problemas } = await montarDevolucao(args);
+          if ((args.modo || 'previa') !== 'criar') return out({ modo: 'previa (nada foi gravado)', resumo, json: corpo });
+          if (problemas.length) return { ...out({ bloqueado: 'Corrija os problemas antes de criar.', problemas }), isError: true };
+          const r = await bling('POST', '/nfe', { body: corpo });
+          audit('rascunho_devolucao_criado', { idNotaOriginal: args.idNotaOriginal, resposta: r?.data });
+          return out({ criado: 'Rascunho gravado no Bling. Ainda NÃO transmitido.', nota: r?.data, resumo });
+        },
+
+        async transmitir_nota({ idNotaFiscal, confirmacao }) {
+          await garantirEmpresa();
+          const n = await obterNota(idNotaFiscal);
+          const num = String(n.numero || '').replace(/^0+/, '');
+          if (!num || String(confirmacao).replace(/^0+/, '') !== num) {
+            return { ...out(`Confirmação não confere. A nota $${idNotaFiscal} é a nº $${n.numero}.`), isError: true };
+          }
+          if (SITUACOES_VALIDAS.has(Number(n.situacao))) return out(`A nota $${n.numero} já está autorizada.`);
+          const r = await bling('POST', `/nfe/$${Number(idNotaFiscal)}/enviar`);
+          audit('nota_transmitida', { idNotaFiscal, numero: n.numero, resposta: r?.data ?? r });
+          const depois = await obterNota(idNotaFiscal);
+          return out({ enviada: true, numero: depois.numero, situacao: depois.situacao, chave: depois.chaveAcesso, resposta: r?.data ?? r });
+        },
+
+        async lancar_estoque_nota({ idNotaFiscal, idDeposito }) {
+          await garantirEmpresa();
+          const rota = idDeposito ? `/nfe/$${Number(idNotaFiscal)}/lancar-estoque/$${Number(idDeposito)}` : `/nfe/$${Number(idNotaFiscal)}/lancar-estoque`;
+          const r = await bling('POST', rota);
+          audit('estoque_lancado', { idNotaFiscal, idDeposito, resposta: r?.data ?? r });
+          return out({ estoqueLancado: true, resposta: r?.data ?? r });
+        },
+      };
+
+      // ---------------------------------------------------------------------------
+      // Protocolo MCP (JSON-RPC sobre Streamable HTTP, respostas em JSON)
+      // ---------------------------------------------------------------------------
+      const PROTOCOLOS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+
+      async function rpc(msg) {
+        const { id, method, params } = msg;
+        const ok = (result) => ({ jsonrpc: '2.0', id, result });
+        const fail = (code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
+        switch (method) {
+          case 'initialize': {
+            const pedido = params?.protocolVersion;
+            return ok({
+              protocolVersion: PROTOCOLOS.includes(pedido) ? pedido : PROTOCOLOS[0],
+              capabilities: { tools: { listChanged: false } },
+              serverInfo: { name: 'mio-bling-mcp', version: '0.1.0' },
+              instructions: 'Devoluções de NF-e no Bling da Mio Peças. Fluxo: buscar_nota → preparar_devolucao (previa) → aprovação do usuário → preparar_devolucao (criar) → aprovação → transmitir_nota → lancar_estoque_nota. Nunca transmita sem aprovação explícita.',
+            });
+          }
+          case 'ping': return ok({});
+          case 'tools/list': return ok({ tools: TOOLS });
+          case 'tools/call': {
+            const h = HANDLERS[params?.name];
+            if (!h) return fail(-32602, `Ferramenta desconhecida: $${params?.name}`);
+            try { return ok(await h(params.arguments || {})); }
+            catch (e) { return ok({ ...out(`Erro: $${e.message}`), isError: true }); }
+          }
+          default:
+            return fail(-32601, `Método não suportado: $${method}`);
+        }
+      }
+
+      // ---------------------------------------------------------------------------
+      // HTTP
+      // ---------------------------------------------------------------------------
+      const oauthStates = new Map();
+
+      function send(res, status, body, headers = {}) {
+        const isObj = typeof body === 'object';
+        res.writeHead(status, { 'Content-Type': isObj ? 'application/json' : 'text/html; charset=utf-8', ...headers });
+        res.end(isObj ? JSON.stringify(body) : body);
+      }
+
+      function readBody(req, limit = 1e6) {
+        return new Promise((resolve, reject) => {
+          let size = 0; const chunks = [];
+          req.on('data', (c) => { size += c.length; if (size > limit) { reject(new Error('corpo grande demais')); req.destroy(); } else chunks.push(c); });
+          req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+          req.on('error', reject);
+        });
+      }
+
+      function autorizadoMcp(req, url) {
+        const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+        const segredoNaRota = url.pathname.startsWith('/mcp/') ? url.pathname.slice(5) : '';
+        return (bearer && safeEqual(bearer, CFG.mcpSecret)) || (segredoNaRota && safeEqual(segredoNaRota, CFG.mcpSecret));
+      }
+
+      const server = http.createServer(async (req, res) => {
+        const url = new URL(req.url, CFG.publicUrl);
+        try {
+          if (url.pathname === '/health') {
+            return send(res, 200, { ok: true, blingAutorizado: Boolean(tokens?.refresh_token) });
+          }
+
+          if (url.pathname === '/oauth/start') {
+            if (!safeEqual(url.searchParams.get('key') || '', CFG.mcpSecret)) return send(res, 403, 'Acesso negado.');
+            const state = crypto.randomBytes(16).toString('hex');
+            oauthStates.set(state, Date.now());
+            const auth = new URL(CFG.authorizeUrl);
+            auth.searchParams.set('response_type', 'code');
+            auth.searchParams.set('client_id', CFG.clientId);
+            auth.searchParams.set('state', state);
+            return send(res, 302, '', { Location: auth.toString() });
+          }
+
+          if (url.pathname === '/oauth/callback') {
+            const state = url.searchParams.get('state') || '';
+            const criado = oauthStates.get(state);
+            oauthStates.delete(state);
+            if (!criado || Date.now() - criado > 10 * 60e3) return send(res, 400, 'State inválido ou expirado. Recomece em /oauth/start.');
+            const code = url.searchParams.get('code');
+            if (!code) return send(res, 400, 'Código ausente.');
+            await tokenRequest({ grant_type: 'authorization_code', code });
+            cnpjVerificado = false;
+            try { await garantirEmpresa(); } catch (e) {
+              fs.rmSync(TOKEN_FILE, { force: true }); tokens = null;
+              audit('oauth_rejeitado', { motivo: e.message });
+              return send(res, 403, `Autorização recusada: $${e.message}`);
+            }
+            audit('oauth_autorizado', {});
+            return send(res, 200, '<h2>Bling autorizado.</h2><p>Pode fechar esta aba.</p>');
+          }
+
+          if (url.pathname === '/mcp' || url.pathname.startsWith('/mcp/')) {
+            if (!autorizadoMcp(req, url)) return send(res, 401, { error: 'unauthorized' });
+            if (req.method === 'GET' || req.method === 'DELETE') return send(res, 405, { error: 'method not allowed' }, { Allow: 'POST' });
+            if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' });
+            let payload;
+            try { payload = JSON.parse(await readBody(req)); }
+            catch { return send(res, 400, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'JSON inválido' } }); }
+            const lote = Array.isArray(payload) ? payload : [payload];
+            const respostas = [];
+            for (const m of lote) if (m && m.id !== undefined && m.method) respostas.push(await rpc(m));
+            if (!respostas.length) { res.writeHead(202); return res.end(); }
+            return send(res, 200, Array.isArray(payload) ? respostas : respostas[0]);
+          }
+
+          return send(res, 404, { error: 'not found' });
+        } catch (e) {
+          console.error(e);
+          return send(res, 500, { error: e.message });
+        }
+      });
+
+      if (require.main === module) {
+        server.listen(CFG.port, () => console.log(`mio-bling-mcp ouvindo na porta $${CFG.port}`));
+      }
+      module.exports = { server, rpc, montarDevolucao, CFG };
+
+  caddyfile:
+    content: |
+      {$$PUBLIC_HOST} {
+          encode gzip
+
+          @permitido path /mcp /mcp/* /oauth/start /oauth/callback /health
+          handle @permitido {
+              reverse_proxy mcp:3000
+          }
+
+          handle {
+              respond "not found" 404
+          }
+
+          log {
+              output stdout
+              format console
+          }
+      }
+
+
+volumes:
+  mcp-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  mcpnet:
