@@ -246,10 +246,11 @@ async function otimizar(orig) {
   }
 }
 async function otimizarTudo() {
+  // Ordem: foto principal dos publicados, depois principal dos demais, depois o resto da galeria.
+  const linhas = db.prepare("SELECT imagens, publicado FROM produtos WHERE imagens <> '[]' ORDER BY publicado DESC").all().map((r) => JSON.parse(r.imagens));
+  const fila = [...linhas.map((l) => l[0]), ...linhas.flatMap((l) => l.slice(1))];
   let n = 0;
-  for (const r of db.prepare("SELECT imagens FROM produtos WHERE imagens <> '[]'").all()) {
-    for (const f of JSON.parse(r.imagens)) { if (!fs.existsSync(path.join(IMG_DIR, nomeOtim(f, 480)))) { await otimizar(f); n++; } }
-  }
+  for (const f of fila) { if (f && !fs.existsSync(path.join(IMG_DIR, nomeOtim(f, 1200)))) { await otimizar(f); n++; } }
   if (n) console.log(`[fotos] ${n} fotos otimizadas`);
 }
 const fotoOtim = (orig, tam) => (orig && fs.existsSync(path.join(IMG_DIR, nomeOtim(orig, tam))) ? nomeOtim(orig, tam) : orig);
