@@ -214,6 +214,47 @@ function problemas(p) {
 }
 
 // ---------------------------------------------------------------------------
+// Fotos otimizadas: as do Bling chegam com ~2.600 px e ~800 KB. A biblioteca sharp é
+// instalada uma vez no volume de dados (o repositório continua sem dependências) e gera
+// cards de 480 px e fotos de 1.200 px em WebP.
+// ---------------------------------------------------------------------------
+const DEPS_DIR = path.join(CFG.dataDir, 'deps');
+let sharp = null;
+function carregarSharp() {
+  try { sharp = require(path.join(DEPS_DIR, 'node_modules', 'sharp')); return true; } catch { return false; }
+}
+function instalarSharp() {
+  if (carregarSharp()) return Promise.resolve(true);
+  return new Promise((ok) => {
+    fs.mkdirSync(DEPS_DIR, { recursive: true });
+    const { spawn } = require('node:child_process');
+    console.log('[fotos] instalando sharp no volume (uma vez)…');
+    const pr = spawn('npm', ['install', '--prefix', DEPS_DIR, '--no-audit', '--no-fund', '--omit=dev', 'sharp@0.33.5'], { stdio: 'ignore' });
+    pr.on('exit', (code) => { const r = code === 0 && carregarSharp(); console.log(`[fotos] sharp ${r ? 'pronto' : 'indisponível (código ' + code + ')'}`); ok(r); });
+    pr.on('error', () => ok(false));
+  });
+}
+const nomeOtim = (orig, tam) => orig.replace(/\.(jpg|png|webp|gif)$/, `-${tam}.webp`);
+async function otimizar(orig) {
+  if (!sharp) return;
+  const src = path.join(IMG_DIR, orig);
+  for (const tam of [480, 1200]) {
+    const dst = path.join(IMG_DIR, nomeOtim(orig, tam));
+    if (fs.existsSync(dst)) continue;
+    try { await sharp(src).rotate().resize(tam, tam, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 78 }).toFile(dst); }
+    catch (e) { evento('foto_otim_erro', { orig, erro: e.message }); }
+  }
+}
+async function otimizarTudo() {
+  let n = 0;
+  for (const r of db.prepare("SELECT imagens FROM produtos WHERE imagens <> '[]'").all()) {
+    for (const f of JSON.parse(r.imagens)) { if (!fs.existsSync(path.join(IMG_DIR, nomeOtim(f, 480)))) { await otimizar(f); n++; } }
+  }
+  if (n) console.log(`[fotos] ${n} fotos otimizadas`);
+}
+const fotoOtim = (orig, tam) => (orig && fs.existsSync(path.join(IMG_DIR, nomeOtim(orig, tam))) ? nomeOtim(orig, tam) : orig);
+
+// ---------------------------------------------------------------------------
 // Bling: OAuth + cliente
 // ---------------------------------------------------------------------------
 let tokens = kvGet('bling_tokens');
@@ -290,6 +331,7 @@ async function baixarImagem(url, nome) {
   const buf = Buffer.from(await res.arrayBuffer());
   if (buf.length > 4 * 1024 * 1024) throw new Error('imagem maior que 4 MB');
   fs.writeFileSync(destino, buf);
+  for (const tam of [480, 1200]) fs.rmSync(path.join(IMG_DIR, nomeOtim(nome, tam)), { force: true });
   return nome;
 }
 
@@ -310,7 +352,7 @@ async function detalharProduto(id) {
   const imagens = [];
   for (let i = 0; i < links.length; i++) {
     const nome = `${id}-${i}.${extensaoImagem(links[i])}`;
-    try { imagens.push(await baixarImagem(links[i], nome)); } catch (e) { evento('imagem_erro', { id, erro: e.message }); }
+    try { imagens.push(await baixarImagem(links[i], nome)); await otimizar(nome); } catch (e) { evento('imagem_erro', { id, erro: e.message }); }
   }
   const desc = d.descricaoComplementar && d.descricaoComplementar.replace(/<[^>]+>/g, '').trim() ? d.descricaoComplementar : (d.descricaoCurta || '');
   db.prepare(`UPDATE produtos SET descricao=?, marca=?, gtin=?, peso=?, altura=?, largura=?, profundidade=?,
@@ -601,10 +643,12 @@ function cpfValido(cpf) {
 
 // Visão pública do produto.
 function produtoPublico(p, completo = false) {
-  const imgs = JSON.parse(p.imagens || '[]').map((f) => `/img/${f}`);
+  const orig = JSON.parse(p.imagens || '[]');
+  const imgs = orig.map((f) => `/img/${fotoOtim(f, 1200)}`);
+  const card = orig[0] && fotoOtim(orig[0], 480) !== orig[0] ? `/img/${fotoOtim(orig[0], 480)}` : null;
   const base = {
     id: p.id, slug: p.slug, nome: p.titulo_site || p.nome, preco: p.preco, disponivel: p.estoque > 0,
-    estoque: p.estoque > 0 ? Math.min(Math.floor(p.estoque), 99) : 0, imagem: (p.miniatura ? `/img/${p.miniatura}` : imgs[0]) || null, categoria: p.categoria_site, marca: p.marca,
+    estoque: p.estoque > 0 ? Math.min(Math.floor(p.estoque), 99) : 0, imagem: card || imgs[0] || (p.miniatura ? `/img/${p.miniatura}` : null), categoria: p.categoria_site, marca: p.marca,
   };
   return completo ? { ...base, imagens: imgs, descricao: p.descricao, codigo: p.codigo, gtin: p.gtin, peso: p.peso } : base;
 }
@@ -628,7 +672,7 @@ async function rotear(req, res, url) {
   // Imagens (cacheadas do Bling)
   if (p.startsWith('/img/') && m === 'GET') {
     const nome = path.basename(p);
-    if (!/^\d+-\d+t?\.(jpg|png|webp|gif)$/.test(nome)) return send(res, 404, { erro: 'não encontrado' });
+    if (!/^\d+-\d+(t|\.\w+-\d+|-\d+)?\.(jpg|png|webp|gif)$/.test(nome) && !/^\d+-\d+-(480|1200)\.webp$/.test(nome)) return send(res, 404, { erro: 'não encontrado' });
     const arq = path.join(IMG_DIR, nome);
     if (!fs.existsSync(arq)) return send(res, 404, { erro: 'não encontrado' });
     const tipo = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' }[nome.split('.').pop()];
@@ -909,6 +953,7 @@ setInterval(() => {
 if (require.main === module) {
   server.listen(CFG.port, () => console.log(`mio-loja API na porta ${CFG.port}`));
   espelharAssets().catch((e) => console.warn('[asset]', e.message));
+  instalarSharp().then((ok) => ok && otimizarTudo()).catch((e) => console.warn('[fotos]', e.message));
   // Reaplica a classificação automática (mantém o que foi escolhido à mão no painel).
   for (const r of db.prepare('SELECT id, nome FROM produtos WHERE categoria_manual=0').all()) db.prepare('UPDATE produtos SET categoria_site=? WHERE id=?').run(sugerirCategoria(r.nome), r.id);
   if (tokens?.refresh_token) setTimeout(() => sincronizar(), 5000);
