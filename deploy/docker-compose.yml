@@ -25,7 +25,7 @@ services:
       MELHOR_ENVIO_TOKEN: ${MELHOR_ENVIO_TOKEN:-}
       TZ: America/Sao_Paulo
     labels:
-      mio.commit: "e44829e"
+      mio.commit: "151fb5b"
     configs:
       - source: api_server
         target: /app/server.js
@@ -46,7 +46,7 @@ services:
     ports:
       - "3200:80"
     labels:
-      mio.commit: "e44829e"
+      mio.commit: "151fb5b"
     configs:
       - source: nginx_conf
         target: /etc/nginx/conf.d/default.conf
