@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS eventos (
 
 // Migração: bancos criados antes da coluna categoria_manual.
 try { db.exec('ALTER TABLE produtos ADD COLUMN categoria_manual INTEGER DEFAULT 0'); } catch { /* já existe */ }
+try { db.exec('ALTER TABLE produtos ADD COLUMN miniatura TEXT'); } catch { /* já existe */ }
 const agora = () => new Date().toISOString();
 const kvGet = (k) => { const r = db.prepare('SELECT v FROM kv WHERE k=?').get(k); return r ? JSON.parse(r.v) : null; };
 const kvSet = (k, v) => db.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').run(k, JSON.stringify(v));
@@ -358,6 +359,12 @@ async function sincronizar({ completo = false } = {}) {
           db.prepare(`INSERT INTO produtos(id,codigo,nome,slug,preco,estoque,situacao,formato,categoria_site,sync_em)
             VALUES(?,?,?,?,?,?,?,?,?,?)`).run(p.id, p.codigo || '', p.nome, slugUnico(p.nome, p.id), preco, estoque,
             p.situacao || 'A', p.formato || 'S', sugerirCategoria(p.nome), agora());
+        }
+        // Miniatura para os cards: a listagem do Bling já traz a versão reduzida da foto principal.
+        const mini = db.prepare('SELECT miniatura FROM produtos WHERE id=?').get(p.id)?.miniatura;
+        if (p.imagemURL && /\/t\//.test(p.imagemURL) && !(mini && fs.existsSync(path.join(IMG_DIR, mini)))) {
+          const nome = `${p.id}-0t.${extensaoImagem(p.imagemURL)}`;
+          try { await baixarImagem(p.imagemURL, nome); db.prepare('UPDATE produtos SET miniatura=? WHERE id=?').run(nome, p.id); } catch (e) { evento('miniatura_erro', { id: p.id, erro: e.message }); }
         }
         sync.lidos++;
       }
@@ -597,7 +604,7 @@ function produtoPublico(p, completo = false) {
   const imgs = JSON.parse(p.imagens || '[]').map((f) => `/img/${f}`);
   const base = {
     id: p.id, slug: p.slug, nome: p.titulo_site || p.nome, preco: p.preco, disponivel: p.estoque > 0,
-    estoque: p.estoque > 0 ? Math.min(Math.floor(p.estoque), 99) : 0, imagem: imgs[0] || null, categoria: p.categoria_site, marca: p.marca,
+    estoque: p.estoque > 0 ? Math.min(Math.floor(p.estoque), 99) : 0, imagem: (p.miniatura ? `/img/${p.miniatura}` : imgs[0]) || null, categoria: p.categoria_site, marca: p.marca,
   };
   return completo ? { ...base, imagens: imgs, descricao: p.descricao, codigo: p.codigo, gtin: p.gtin, peso: p.peso } : base;
 }
@@ -621,7 +628,7 @@ async function rotear(req, res, url) {
   // Imagens (cacheadas do Bling)
   if (p.startsWith('/img/') && m === 'GET') {
     const nome = path.basename(p);
-    if (!/^\d+-\d+\.(jpg|png|webp|gif)$/.test(nome)) return send(res, 404, { erro: 'não encontrado' });
+    if (!/^\d+-\d+t?\.(jpg|png|webp|gif)$/.test(nome)) return send(res, 404, { erro: 'não encontrado' });
     const arq = path.join(IMG_DIR, nome);
     if (!fs.existsSync(arq)) return send(res, 404, { erro: 'não encontrado' });
     const tipo = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' }[nome.split('.').pop()];

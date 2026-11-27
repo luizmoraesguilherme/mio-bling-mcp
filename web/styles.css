@@ -426,3 +426,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .ap-foto { width: 64px; height: 64px; } .ap-foto img { width: 56px; height: 56px; }
   .ap-nome { font-size: 13.5px; }
 }
+
+/* páginas cujo <main> é container + seção ao mesmo tempo mantêm a margem lateral */
+.container.secao { padding-left: 16px; padding-right: 16px; }
