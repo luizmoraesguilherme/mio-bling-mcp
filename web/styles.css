@@ -1,4 +1,11 @@
 /* Mio Peça — identidade visual da Dande Comercial */
+/* Fontes do site da Dande (espelhadas em /assets) */
+@font-face { font-family: 'Dande Sans'; src: url('/assets/pt-sans.woff') format('woff'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Dande Sans'; src: url('/assets/pt-sans-bold.woff') format('woff'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Dande Narrow'; src: url('/assets/pt-sans-narrow.woff') format('woff'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Futura PT'; src: url('/assets/futura-pt-book.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Futura PT'; src: url('/assets/futura-pt-bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+
 :root {
   --azul-escuro: #0a4e9b;
   --azul: #337db9;
@@ -22,8 +29,8 @@
   --raio: 10px;
   --sombra: 0 3px 3px rgba(0, 0, 0, .15);
   --sombra-card: 0 1px 2px rgba(10, 78, 155, .08), 0 6px 18px rgba(10, 78, 155, .08);
-  --fonte: 'PT Sans', system-ui, sans-serif;
-  --fonte-titulo: 'Jost', 'PT Sans', sans-serif;
+  --fonte: 'Dande Sans', 'PT Sans', system-ui, sans-serif;
+  --fonte-titulo: 'Futura PT', 'Jost', 'PT Sans', sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -260,3 +267,51 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .esqueleto { background: linear-gradient(90deg, #eef3f6 25%, #f7fafc 50%, #eef3f6 75%); background-size: 200% 100%; animation: brilho 1.2s infinite; border-radius: var(--raio); min-height: 300px; }
 @keyframes brilho { to { background-position: -200% 0; } }
 :focus-visible { outline: 3px solid rgba(37, 170, 225, .5); outline-offset: 2px; }
+
+/* ======================================================================
+   Identidade Dande — camada sobre a base acima
+   ====================================================================== */
+#cabecalho > .container { min-height: 92px; }
+.logo img { height: 62px; width: auto; }
+.logo .tag { font-family: 'Dande Narrow', var(--fonte); font-size: 12px; color: var(--cinza); text-transform: uppercase; letter-spacing: .08em; border-left: 1px solid var(--linha); padding-left: 10px; line-height: 1.2; }
+.menu-acoes .telefone { font-family: 'Dande Sans', var(--fonte); font-weight: 700; font-size: 17px; color: #727272; text-transform: none; }
+.menu-acoes .telefone svg { color: #3b86ff; }
+.menu-acoes .social img { width: 34px; height: 34px; }
+.menu-acoes .menu-link { font-size: 14px; }
+@media (max-width: 1080px) { .menu-acoes .menu-link, .menu-acoes .telefone { display: none; } }
+@media (max-width: 760px) { .logo img { height: 46px; } .logo .tag { display: none; } .menu-acoes .social { display: none; } }
+
+/* Banner rotativo (os mesmos da home da Dande) */
+.slider { position: relative; background: #016ba9; overflow: hidden; }
+.slider .slides { display: flex; transition: transform .6s ease; }
+.slider picture { flex: 0 0 100%; display: block; }
+.slider img { width: 100%; height: auto; display: block; }
+.slider .pontos { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; gap: 8px; }
+.slider .pontos button { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; background: transparent; padding: 0; cursor: pointer; }
+.slider .pontos button.ativo { background: #fff; }
+.slider .seta { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.85); color: var(--azul-escuro); cursor: pointer; font-size: 22px; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.slider .seta.ant { left: 16px; } .slider .seta.prox { right: 16px; }
+@media (max-width: 640px) { .slider .seta { display: none; } }
+
+#pit .item img { width: 38px; height: auto; flex-shrink: 0; }
+#pit { font-family: 'Futura PT', var(--fonte-titulo); font-weight: 400; }
+
+/* Blocos de categoria com as fotos da Dande */
+.cat { min-height: 290px; padding: 20px 12px 0; justify-content: flex-start; gap: 10px; }
+.cat h3 { font-family: 'Dande Sans', var(--fonte); font-size: 26px; margin: 4px 0 0; }
+.cat .foto-cat { margin-top: auto; max-height: 150px; width: auto; object-fit: contain; }
+.cat .ico-cat { margin: auto 0 26px; }
+@media (max-width: 760px) { .cat { min-height: 230px; } .cat h3 { font-size: 20px; } .cat .foto-cat { max-height: 110px; } }
+
+/* Marcas como na Dande */
+.marcas-dande { display: grid; grid-template-columns: 1fr 3fr; gap: 24px; align-items: center; }
+.marcas-dande h2 { color: var(--ciano); font-size: 32px; margin: 0; }
+.marcas { justify-content: space-between; padding: 18px 28px; }
+.marcas img { max-height: 54px; width: auto; }
+@media (max-width: 760px) { .marcas-dande { grid-template-columns: 1fr; } .marcas { flex-direction: column; } }
+
+.loja-fisica { background: #d5e3e8 url('/assets/supergraphic.jpg') center / cover; }
+
+/* Rodapé com o logo negativo da Dande */
+#rodape .logo-rodape { height: 64px; width: auto; margin-bottom: 14px; }
+#rodape .item img { width: 22px; height: 22px; flex-shrink: 0; }

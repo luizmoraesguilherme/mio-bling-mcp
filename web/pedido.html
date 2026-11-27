@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Seu pedido | Mio Peça</title>
+  <title>Seu pedido | Dande Loja Online</title>
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#0a4e9b">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/favicon-dande.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@
         aguardando_pagamento: ['espera', ic.relogio.replace(/16/g, '30'), 'Aguardando pagamento', p.pagamento ? 'Seu pedido foi registrado. Conclua o pagamento para separarmos as peças.' : 'Seu pedido foi registrado. Vamos falar com você pelo WhatsApp para combinar o pagamento.'],
         pago: ['ok', ic.check.replace(/18/g, '30'), 'Pagamento aprovado', 'Recebemos seu pagamento. Já estamos separando as peças.'],
         enviado: ['ok', ic.caixa.replace(/18/g, '30'), 'Pedido enviado', 'Seu pedido saiu para entrega.'],
-        entregue: ['ok', ic.check.replace(/18/g, '30'), 'Pedido entregue', 'Obrigado por comprar com a Mio Peça!'],
+        entregue: ['ok', ic.check.replace(/18/g, '30'), 'Pedido entregue', 'Obrigado por comprar com a Dande!'],
         cancelado: ['cancelado', '✕', 'Pedido cancelado', 'Se foi engano, fale com a gente pelo WhatsApp.'],
       };
       const [cls, icone, titulo, texto] = estados[p.status] || estados.aguardando_pagamento;

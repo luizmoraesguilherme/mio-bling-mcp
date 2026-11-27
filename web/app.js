@@ -97,14 +97,18 @@
       </div></div>
       <header id="cabecalho">
         <div class="container">
-          <a href="/" class="logo" aria-label="Mio Peça — início"><img src="/logo.svg" alt="Mio Peça" width="190" height="50"></a>
+          <a href="/" class="logo" aria-label="Dande — loja online"><img src="/assets/logo-dande.png" alt="Dande Peças para Refrigeração" width="190" height="62" onerror="this.onerror=null;this.src='/logo.svg'"><span class="tag">Loja<br>online</span></a>
           <form class="busca" action="/loja.html" role="search">
             <label for="q" class="sr">Buscar peça</label>
             <input id="q" name="q" type="search" placeholder="Busque por peça, modelo ou código" value="${esc(qs('q') || '')}" autocomplete="off">
             <button type="submit" aria-label="Buscar">${ic.busca}</button>
           </form>
           <nav class="menu-acoes">
-            <a href="${linkWhats()}" target="_blank" rel="noopener">${ic.whats.replace('26', '20').replace('26', '20')}<span class="txt">Ajuda</span></a>
+            <a class="menu-link" href="https://dandecomercial.com.br/a-dande/" target="_blank" rel="noopener">A Dande</a>
+            <a class="menu-link" href="/loja.html">Produtos</a>
+            <a class="telefone" href="tel:+551239362082">${ic.tel.replace(/16/g, '18')}${esc(M.telefone)}</a>
+            <a class="social" href="${esc(M.facebook)}" target="_blank" rel="noopener" aria-label="Facebook"><img src="/assets/ic-facebook.png" alt="" width="34" height="34"></a>
+            <a class="social" href="${linkWhats()}" target="_blank" rel="noopener" aria-label="WhatsApp"><img src="/assets/ic-whatsapp.png" alt="" width="34" height="34"></a>
             <a href="/carrinho.html" class="btn-carrinho" aria-label="Carrinho">${ic.carrinho}<span class="qtd"></span><span class="txt">Carrinho</span></a>
           </nav>
         </div>
@@ -123,20 +127,20 @@
       <footer id="rodape">
         <div class="container">
           <div>
-            <img src="/logo.svg" alt="Mio Peça" width="190" height="50" style="background:#fff;border-radius:8px;padding:6px 10px;margin-bottom:14px">
-            <p style="color:#dbe9f7;margin:0">Peças para refrigeração, lavadoras, micro-ondas e purificadores. A loja online da Dande, há mais de 20 anos em São José dos Campos.</p>
+            <img class="logo-rodape" src="/assets/logo-dande-negativo.png" alt="Dande" width="160" height="64" onerror="this.onerror=null;this.src='/logo.svg';this.style.background='#fff';this.style.borderRadius='8px';this.style.padding='6px 10px'">
+            <p style="color:#dbe9f7;margin:0">Peças para refrigeração, lavadoras, tanquinhos, micro-ondas, lava-louças e filtros de água. Há mais de 20 anos em São José dos Campos, agora também online.</p>
           </div>
           <div>
             <h4>Atendimento</h4>
             <div class="item">${ic.tel}<span>${esc(M.telefone)}</span></div>
-            <div class="item">${ic.whats.replace(/26/g, '16')}<a href="${linkWhats()}" target="_blank" rel="noopener">${esc(M.whatsappTexto)}</a></div>
-            <div class="item">${ic.mail}<a href="mailto:${esc(M.email)}">${esc(M.email)}</a></div>
-            <div class="item">${ic.relogio}<span>${esc(M.horario)}</span></div>
+            <div class="item"><img src="/assets/ic-whatsapp-rodape.png" alt=""><a href="${linkWhats()}" target="_blank" rel="noopener">${esc(M.whatsappTexto)}</a></div>
+            <div class="item"><img src="/assets/ic-mail.png" alt=""><a href="mailto:${esc(M.email)}">${esc(M.email)}</a></div>
+            <div class="item"><img src="/assets/ic-horario.png" alt=""><span>${esc(M.horario)}</span></div>
           </div>
           <div>
             <h4>Loja física</h4>
             <div class="item">${ic.pin}<span>${esc(M.endereco)}<br>${esc(M.cidade)}</span></div>
-            <div class="item"><a href="${esc(M.facebook)}" target="_blank" rel="noopener">@danderefrigeracao</a></div>
+            <div class="item"><img src="/assets/ic-facebook-rodape.png" alt=""><a href="${esc(M.facebook)}" target="_blank" rel="noopener">@danderefrigeracao</a></div>
           </div>
           <div>
             <h4>Institucional</h4>
@@ -150,10 +154,10 @@
         </div>
       </footer>
       <div class="assinatura"><div class="container">
-        <span>${esc(M.razao)} · CNPJ ${esc(M.cnpj)}</span>
+        <span>Loja online operada por ${esc(M.razao)} · CNPJ ${esc(M.cnpj)}</span>
         <span>Pagamentos processados pelo Mercado Pago</span>
       </div></div>
-      <a id="btn-whats" href="${linkWhats('Olá! Vim pela loja online da Mio Peça.')}" target="_blank" rel="noopener">${ic.whats}<span>Fale no WhatsApp</span></a>`;
+      <a id="btn-whats" href="${linkWhats('Olá! Vim pela loja online da Dande.')}" target="_blank" rel="noopener">${ic.whats}<span>Fale no WhatsApp</span></a>`;
   }
 
   // ---------- card de produto ----------

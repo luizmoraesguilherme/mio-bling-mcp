@@ -47,6 +47,71 @@ const IMG_DIR = path.join(CFG.dataDir, 'img');
 fs.mkdirSync(IMG_DIR, { recursive: true });
 
 // ---------------------------------------------------------------------------
+// Identidade visual da Dande: arquivos do site dandecomercial.com.br espelhados
+// no volume na primeira execução e servidos em /assets/ (não depende do site antigo).
+// ---------------------------------------------------------------------------
+const ASSET_DIR = path.join(CFG.dataDir, 'assets');
+fs.mkdirSync(ASSET_DIR, { recursive: true });
+const DANDE = 'https://dandecomercial.com.br/wp-content';
+const ASSETS = {
+  'logo-dande.png': `${DANDE}/uploads/2018/08/Logo_Dande_Institucional.png`,
+  'logo-dande-negativo.png': `${DANDE}/themes/dande/imagens/Logo_Dande_Negativo.png`,
+  'favicon-dande.png': `${DANDE}/uploads/2018/08/cropped-favicon-1-270x270.png`,
+  'banner-1.jpg': `${DANDE}/uploads/2018/10/DN_HOME_BannerTopo-2.jpg`,
+  'banner-2.jpg': `${DANDE}/uploads/2018/10/DN_HOME_BannerTopo_2-2.jpg`,
+  'banner-3.jpg': `${DANDE}/uploads/2018/10/DN_HOME_BannerTopo_3-2.jpg`,
+  'banner-4.jpg': `${DANDE}/uploads/2018/10/DN_HOME_BannerTopo_4-2.jpg`,
+  'banner-m-1.jpg': `${DANDE}/uploads/2021/02/DN_HOME_BannerTopo_640x640px-1-min.jpg`,
+  'banner-m-2.jpg': `${DANDE}/uploads/2021/02/DN_HOME_BannerTopo_2_640x640px-1-min.jpg`,
+  'banner-m-3.jpg': `${DANDE}/uploads/2018/10/DN_HOME_BannerTopo_3_640x640px-1.jpg`,
+  'banner-m-4.jpg': `${DANDE}/uploads/2018/10/DN_HOME_BannerTopo_4_640x640px-1.jpg`,
+  'supergraphic.jpg': `${DANDE}/uploads/2021/02/supergraphic-gray-light-min.jpg`,
+  'pit-20anos.png': `${DANDE}/themes/dande/imagens/DN_HOME_BarraTopo_Icones_20anos.png`,
+  'pit-rapido.png': `${DANDE}/themes/dande/imagens/DN_HOME_BarraTopo_Icones_AtendRapido.png`,
+  'pit-marcas.png': `${DANDE}/themes/dande/imagens/DN_HOME_BarraTopo_Icones_GrandesMarcas.png`,
+  'pit-entrega.png': `${DANDE}/themes/dande/imagens/DN_HOME_BarraTopo_Icones_ProntaEntrega.png`,
+  'pit-estacionamento.png': `${DANDE}/themes/dande/imagens/DN_HOME_BarraTopo_Icones_Estacionamento.png`,
+  'marca-brastemp.png': `${DANDE}/themes/dande/imagens/af_logo_brastemp.png`,
+  'marca-consul.png': `${DANDE}/themes/dande/imagens/consul-logo.png`,
+  'marca-electrolux.png': `${DANDE}/themes/dande/imagens/Logo-Electrolux.png`,
+  'marca-planeta-agua.png': `${DANDE}/themes/dande/imagens/planeta-agua.png`,
+  'cat-geladeiras.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_Geladeiras.png`,
+  'cat-lavadoras.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_Lavadora.png`,
+  'cat-secadoras.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_Secadoras.png`,
+  'cat-tanquinhos.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_Refrigeracao.png`,
+  'cat-microondas.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_Microondas.png`,
+  'cat-ar-condicionado.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_ArCondicionado.png`,
+  'cat-filtros.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_FiltrodeAgua.png`,
+  'cat-lava-loucas.png': `${DANDE}/themes/dande/imagens/DN_HOME_Produtos_LavaLoucas.png`,
+  'ic-facebook.png': `${DANDE}/themes/dande/imagens/if_facebook_circle_color_107175.png`,
+  'ic-whatsapp.png': `${DANDE}/themes/dande/imagens/whatsapp.png`,
+  'ic-horario.png': `${DANDE}/themes/dande/imagens/horario-rodape.png`,
+  'ic-mail.png': `${DANDE}/themes/dande/imagens/if_Mail02_928432.png`,
+  'ic-facebook-rodape.png': `${DANDE}/themes/dande/imagens/if_facebook_circle_rodape.png`,
+  'ic-whatsapp-rodape.png': `${DANDE}/themes/dande/imagens/whatsapp-rodape.png`,
+  'pt-sans.woff': `${DANDE}/themes/dande/fontes/PTS55F-webfont.woff`,
+  'pt-sans-bold.woff': `${DANDE}/themes/dande/fontes/PTS75F-webfont.woff`,
+  'pt-sans-narrow.woff': `${DANDE}/themes/dande/fontes/PTN57F-webfont.woff`,
+  'futura-pt-book.woff2': `${DANDE}/themes/dande/fontes/FuturaPT-Book.woff2`,
+  'futura-pt-bold.woff2': `${DANDE}/themes/dande/fontes/FuturaPT-Bold.woff2`,
+};
+const TIPOS = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', woff: 'font/woff', woff2: 'font/woff2' };
+async function espelharAssets() {
+  let novos = 0, falhas = 0;
+  for (const [nome, url] of Object.entries(ASSETS)) {
+    const destino = path.join(ASSET_DIR, nome);
+    if (fs.existsSync(destino) && fs.statSync(destino).size > 0) continue;
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (mio-loja)' } });
+      if (!res.ok) throw new Error(String(res.status));
+      fs.writeFileSync(destino, Buffer.from(await res.arrayBuffer()));
+      novos++;
+    } catch (e) { falhas++; console.warn(`[asset] ${nome}: ${e.message}`); }
+  }
+  if (novos || falhas) console.log(`[asset] identidade Dande: ${novos} baixados, ${falhas} falhas`);
+}
+
+// ---------------------------------------------------------------------------
 // Banco
 // ---------------------------------------------------------------------------
 const db = new DatabaseSync(path.join(CFG.dataDir, 'loja.db'));
@@ -550,6 +615,15 @@ async function rotear(req, res, url) {
     return fs.createReadStream(arq).pipe(res);
   }
 
+  if (p.startsWith('/assets/') && m === 'GET') {
+    const nome = path.basename(p);
+    if (!ASSETS[nome]) return send(res, 404, { erro: 'não encontrado' });
+    const arq = path.join(ASSET_DIR, nome);
+    if (!fs.existsSync(arq)) { espelharAssets().catch(() => {}); return send(res, 404, { erro: 'não encontrado' }); }
+    res.writeHead(200, { 'Content-Type': TIPOS[nome.split('.').pop()], 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': '*' });
+    return fs.createReadStream(arq).pipe(res);
+  }
+
   // ---------- Loja pública ----------
   if (p === '/api/categorias' && m === 'GET') {
     const cont = Object.fromEntries(db.prepare("SELECT categoria_site c, COUNT(*) n FROM produtos WHERE publicado=1 GROUP BY categoria_site").all().map((r) => [r.c, r.n]));
@@ -812,6 +886,7 @@ setInterval(() => {
 
 if (require.main === module) {
   server.listen(CFG.port, () => console.log(`mio-loja API na porta ${CFG.port}`));
+  espelharAssets().catch((e) => console.warn('[asset]', e.message));
   if (tokens?.refresh_token) setTimeout(() => sincronizar(), 5000);
 }
 module.exports = { server, db, CFG, sugerirCategoria, problemas, cpfValido, limparHtml };

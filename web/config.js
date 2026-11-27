@@ -1,6 +1,6 @@
 // Dados de contato e da empresa exibidos no site.
 window.MIO = {
-  loja: 'Mio Peça',
+  loja: 'Dande Loja Online',
   razao: 'Mio Peças para Refrigeração Ltda',
   cnpj: '61.102.078/0001-01',
   whatsapp: '5512982664536',

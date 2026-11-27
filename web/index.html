@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mio Peça — Peças para geladeira, lavadora e micro-ondas | Loja da Dande</title>
+  <title>Dande Loja Online — Peças para geladeira, lavadora, tanquinho e micro-ondas</title>
   <meta name="description" content="Peças para refrigeração, lavadoras, tanquinhos, micro-ondas, purificadores e filtros de água. Loja online da Dande, há mais de 20 anos em São José dos Campos. Envio e retirada na loja.">
-  <meta property="og:title" content="Mio Peça — Loja online da Dande">
+  <meta property="og:title" content="Dande Loja Online — Peças para Refrigeração">
   <meta property="og:description" content="Peças para geladeira, lavadora, micro-ondas e purificadores com pronta entrega.">
   <meta name="theme-color" content="#0a4e9b">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/favicon-dande.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -18,27 +18,11 @@
   <div id="cabecalho-slot"></div>
 
   <main>
-    <section class="hero">
-      <div class="container">
-        <div>
-          <h1>A peça certa para o seu eletrodoméstico voltar a funcionar</h1>
-          <p>Geladeiras, lavadoras, micro-ondas, purificadores e muito mais. Peças originais e paralelas de qualidade, com a experiência de quem está há mais de 20 anos no balcão da Dande.</p>
-          <div class="acoes">
-            <a class="btn btn-primario" href="/loja.html" style="background:#fff;color:#0a4e9b;border-color:#fff">Ver todas as peças</a>
-            <a class="btn btn-claro" id="hero-whats" href="#" target="_blank" rel="noopener">Não achou? Fale com a gente</a>
-          </div>
-        </div>
-        <svg class="hero-arte" viewBox="0 0 320 300" aria-hidden="true">
-          <defs><radialGradient id="hg" cx=".5" cy=".4"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
-          <circle cx="160" cy="150" r="140" fill="url(#hg)"/>
-          <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="70" y="40" width="110" height="200" rx="10" opacity=".95"/><path d="M70 105h110M88 62v24M88 125v40" opacity=".95"/>
-            <rect x="190" y="110" width="90" height="120" rx="8"/><circle cx="235" cy="178" r="30"/><path d="M190 132h90M204 121h8M220 121h8"/>
-            <path d="M218 180c6-6 11 5 17 0s11 5 17 0"/>
-          </g>
-          <g transform="translate(250 70)" fill="none" stroke="#25aae1" stroke-width="4" stroke-linecap="round"><circle r="22" fill="#fff" stroke="none"/><path d="M0-12V12M-10-6 10 6M-10 6 10-6"/></g>
-        </svg>
-      </div>
+    <section class="slider" id="slider" aria-label="Destaques da Dande">
+      <div class="slides" id="slides"></div>
+      <button class="seta ant" id="ant" aria-label="Banner anterior">‹</button>
+      <button class="seta prox" id="prox" aria-label="Próximo banner">›</button>
+      <div class="pontos" id="pontos"></div>
     </section>
 
     <section id="pit" aria-label="Por que comprar com a gente"><div class="container" id="pit-itens"></div></section>
@@ -53,9 +37,14 @@
       <div class="grade-prod" id="destaques"></div>
     </div></section>
 
-    <section class="secao" style="padding-top:0"><div class="container">
-      <div class="secao-titulo"><h2>As melhores peças e marcas você encontra aqui</h2></div>
-      <div class="marcas" aria-label="Marcas atendidas"><span>Brastemp</span><span>Consul</span><span>Electrolux</span><span>Whirlpool</span><span>Planeta Água</span></div>
+    <section class="secao" style="padding-top:0"><div class="container marcas-dande">
+      <h2>As melhores peças e marcas você encontra aqui</h2>
+      <div class="marcas" aria-label="Marcas atendidas">
+        <img src="/assets/marca-brastemp.png" alt="Brastemp" loading="lazy">
+        <img src="/assets/marca-consul.png" alt="Consul" loading="lazy">
+        <img src="/assets/marca-electrolux.png" alt="Electrolux" loading="lazy">
+        <img src="/assets/marca-planeta-agua.png" alt="Planeta Água" loading="lazy">
+      </div>
     </div></section>
 
     <section class="secao loja-fisica"><div class="container">
@@ -76,20 +65,32 @@
   <script src="app.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      const { api, cardProduto, categorias, pitIcone, catIcone, linkWhats, esc, cfg } = window.Mio;
-      document.getElementById('hero-whats').href = linkWhats('Olá! Estou procurando uma peça e não encontrei no site.');
-      document.getElementById('whats-loja').href = linkWhats('Olá! Quero confirmar se uma peça serve no meu aparelho.');
+      const { api, cardProduto, categorias, catIcone, linkWhats, esc, cfg } = window.Mio;
+            document.getElementById('whats-loja').href = linkWhats('Olá! Quero confirmar se uma peça serve no meu aparelho.');
       document.getElementById('end-loja').textContent = `${cfg.endereco} · ${cfg.cidade} · ${cfg.horario}`;
 
-      const pit = [['anos', '20 anos de mercado'], ['rapido', 'Atendimento rápido'], ['marcas', 'Grandes marcas'], ['entrega', 'Peças a pronta entrega'], ['seguro', 'Compra segura com Mercado Pago']];
-      document.getElementById('pit-itens').innerHTML = pit.map(([i, t]) => `<div class="item">${pitIcone[i]}<span>${t}</span></div>`).join('');
+      // Banner rotativo com as artes da Dande (versão quadrada no celular)
+      const ban = [1, 2, 3, 4];
+      document.getElementById('slides').innerHTML = ban.map((n) => `<picture><source media="(max-width: 640px)" srcset="/assets/banner-m-${n}.jpg"><img src="/assets/banner-${n}.jpg" alt="Passa na Dande! As melhores peças para refrigeração você encontra aqui" ${n > 1 ? 'loading="lazy"' : ''} width="1920" height="500"></picture>`).join('');
+      const pontos = document.getElementById('pontos');
+      pontos.innerHTML = ban.map((n, i) => `<button aria-label="Banner ${n}" class="${i ? '' : 'ativo'}"></button>`).join('');
+      let atual = 0, timer;
+      const ir = (i) => { atual = (i + ban.length) % ban.length; document.getElementById('slides').style.transform = `translateX(-${atual * 100}%)`; [...pontos.children].forEach((b, k) => b.classList.toggle('ativo', k === atual)); clearInterval(timer); timer = setInterval(() => ir(atual + 1), 6000); };
+      pontos.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) ir([...pontos.children].indexOf(b)); });
+      document.getElementById('ant').onclick = () => ir(atual - 1);
+      document.getElementById('prox').onclick = () => ir(atual + 1);
+      ir(0);
+
+      const pit = [['20anos', '20 anos de mercado'], ['rapido', 'Atendimento rápido'], ['marcas', 'Grandes marcas'], ['entrega', 'Peças a pronta entrega'], ['estacionamento', 'Retire na loja: temos estacionamento']];
+      document.getElementById('pit-itens').innerHTML = pit.map(([i, t]) => `<div class="item"><img src="/assets/pit-${i}.png" alt="" width="38" height="38"><span>${t}</span></div>`).join('');
 
       const cats = await categorias();
       const mostrar = cats.filter((c) => c.total > 0);
-      const lista = (mostrar.length ? mostrar : cats).slice(0, 8);
+      const lista = (mostrar.length >= 4 ? mostrar : cats.filter((c) => c.slug !== 'outros')).slice(0, 8);
+      const comFoto = new Set(['geladeiras', 'lavadoras', 'secadoras', 'tanquinhos', 'microondas', 'ar-condicionado', 'filtros', 'lava-loucas']);
       document.getElementById('grade-cat').innerHTML = lista.map((c) => `
         <a class="cat" href="/loja.html?cat=${c.slug}">
-          <h3>${esc(c.nome)}</h3>${catIcone[c.slug] || catIcone.outros}<span class="btn-produto">Peças</span>
+          <h3>${esc(c.nome)}</h3><span class="btn-produto">Peças</span>${comFoto.has(c.slug) ? `<img class="foto-cat" src="/assets/cat-${c.slug}.png" alt="" loading="lazy">` : `<span class="ico-cat">${catIcone[c.slug] || catIcone.outros}</span>`}
         </a>`).join('');
 
       const alvo = document.getElementById('destaques');
