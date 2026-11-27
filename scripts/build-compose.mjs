@@ -70,7 +70,7 @@ services:
       timeout: 5s
       retries: 3
     networks: [mionet]
-    mem_limit: 256m
+    mem_limit: 384m
 
   web:
     image: nginx:1.27-alpine
