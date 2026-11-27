@@ -100,7 +100,7 @@
           <a href="/" class="logo" aria-label="Dande — loja online"><img src="/assets/logo-dande.png" alt="Dande Peças para Refrigeração" width="190" height="62" onerror="this.onerror=null;this.src='/logo.svg'"><span class="tag">Loja<br>online</span></a>
           <form class="busca" action="/loja.html" role="search">
             <label for="q" class="sr">Buscar peça</label>
-            <input id="q" name="q" type="search" placeholder="Busque por peça, modelo ou código" value="${esc(qs('q') || '')}" autocomplete="off">
+            <input id="q" name="q" type="search" autocomplete="off" placeholder="Busque por peça, modelo ou código" value="${esc(qs('q') || '')}">
             <button type="submit" aria-label="Buscar">${ic.busca}</button>
           </form>
           <nav class="menu-acoes">
@@ -167,9 +167,9 @@
       <div class="foto">${foto}</div>
       <div class="info">
         <span class="nome">${esc(p.nome)}</span>
-        ${p.disponivel ? '' : '<span><span class="selo selo-esgotado">Esgotado</span></span>'}
+        <span>${p.disponivel ? '<span class="selo selo-retira">Retire hoje na loja</span>' : '<span class="selo selo-esgotado">Esgotado</span>'}</span>
         <span class="preco">${brl(p.preco)}</span>
-        <span class="pix">Pix, cartão ou boleto</span>
+        <span class="pix">no Pix, cartão ou boleto</span>
       </div>
     </a>`;
   }
@@ -183,6 +183,8 @@
   async function iniciar() {
     montarCabecalho([]);
     montarRodape();
+    ligarSugestoes(document.getElementById('q'));
+    document.querySelectorAll('input[data-sugestoes]').forEach(ligarSugestoes);
     const cats = await categorias();
     // remonta o menu de categorias com as que têm produtos
     const nav = document.querySelector('.nav-cat .container');
@@ -191,6 +193,46 @@
       nav.innerHTML = `<a href="/loja.html" class="${location.pathname.startsWith('/loja') && !catAtual && !qs('q') ? 'ativo' : ''}">Todas as peças</a>` +
         cats.filter((c) => c.total > 0).map((c) => `<a href="/loja.html?cat=${c.slug}" class="${catAtual === c.slug ? 'ativo' : ''}">${esc(c.nome)}</a>`).join('');
     }
+  }
+
+  // ---------- busca com sugestões enquanto digita ----------
+  function ligarSugestoes(input) {
+    if (!input || input.dataset.sugLigado) return;
+    input.dataset.sugLigado = '1';
+    const form = input.closest('form');
+    const caixa = document.createElement('div');
+    caixa.className = 'sugestoes'; caixa.hidden = true; caixa.setAttribute('role', 'listbox');
+    form.appendChild(caixa);
+    let timer, ultima = '', idx = -1;
+    const fechar = () => { caixa.hidden = true; idx = -1; };
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (q.length < 2) return fechar();
+      timer = setTimeout(async () => {
+        ultima = q;
+        let r; try { r = await api('/api/produtos?limite=6&q=' + encodeURIComponent(q)); } catch { return fechar(); }
+        if (q !== ultima || input.value.trim() !== q) return;
+        if (!r.itens.length) {
+          caixa.innerHTML = `<a class="todas" href="${linkWhats(`Olá! Procuro: ${q}`)}" target="_blank" rel="noopener">Não achamos “${esc(q)}”. Pergunte no WhatsApp</a>`;
+        } else {
+          caixa.innerHTML = r.itens.map((p) => `<a href="/produto.html?p=${esc(p.slug)}" role="option">${p.imagem ? `<img src="${esc(p.imagem)}" alt="">` : '<span class="ph"></span>'}<span>${esc(p.nome)}</span><span class="preco">${brl(p.preco)}</span></a>`).join('') +
+            `<a class="todas" href="/loja.html?q=${encodeURIComponent(q)}">Ver ${r.total} ${r.total === 1 ? 'resultado' : 'resultados'}</a>`;
+        }
+        caixa.hidden = false; idx = -1;
+      }, 220);
+    });
+    input.addEventListener('keydown', (e) => {
+      const itens = [...caixa.querySelectorAll('a')];
+      if (caixa.hidden || !itens.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        idx = (idx + (e.key === 'ArrowDown' ? 1 : -1) + itens.length) % itens.length;
+        itens.forEach((a, k) => a.classList.toggle('ativo', k === idx));
+      } else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); location = itens[idx].href; }
+      else if (e.key === 'Escape') fechar();
+    });
+    document.addEventListener('click', (e) => { if (!form.contains(e.target)) fechar(); });
   }
 
   window.Mio = { esc, brl, qs, api, toast, ic, pitIcone, catIcone, Carrinho, cardProduto, categorias, linkWhats, cfg: M };

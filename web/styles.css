@@ -315,3 +315,114 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Rodapé com o logo negativo da Dande */
 #rodape .logo-rodape { height: 64px; width: auto; margin-bottom: 14px; }
 #rodape .item img { width: 22px; height: 22px; flex-shrink: 0; }
+
+/* ======================================================================
+   Home mais acolhedora: a pergunta do balcão, atalhos por aparelho,
+   ajuda para achar o modelo, passos de compra e dúvidas.
+   ====================================================================== */
+.btn { text-transform: none; letter-spacing: 0; font-size: 15.5px; }
+
+.boas-vindas { background: linear-gradient(180deg, #e9f5fd 0%, #f5f8fa 100%); border-bottom: 1px solid var(--linha); }
+.boas-vindas .container { padding-top: 44px; padding-bottom: 36px; }
+.bv-texto { max-width: 720px; }
+.boas-vindas h1 { font-family: 'Dande Sans', var(--fonte); font-size: clamp(30px, 4.4vw, 46px); color: var(--azul-escuro); letter-spacing: -.01em; margin-bottom: 12px; }
+.boas-vindas .bv-texto > p { font-size: 18px; color: var(--texto-2); max-width: 60ch; margin: 0 0 22px; }
+.busca-grande { position: relative; display: flex; background: #fff; border: 2px solid var(--ciano); border-radius: 32px; padding: 6px; box-shadow: 0 6px 24px rgba(10, 78, 155, .10); }
+.busca-grande:focus-within { border-color: var(--azul-vivo); box-shadow: 0 0 0 4px rgba(37, 170, 225, .18), 0 6px 24px rgba(10, 78, 155, .10); }
+.busca-grande input { flex: 1; min-width: 0; border: 0; outline: none; font-size: 18px; padding: 10px 18px; background: transparent; }
+.busca-grande button { border: 0; border-radius: 26px; background: var(--azul-vivo); color: #fff; font-weight: 700; font-size: 16px; padding: 0 26px; cursor: pointer; white-space: nowrap; }
+.busca-grande button:hover { background: var(--azul-escuro); }
+.bv-ajuda { font-size: 15px; color: var(--texto-2); margin: 14px 4px 0; }
+@media (max-width: 520px) { .busca-grande button { padding: 0 16px; font-size: 15px; } .busca-grande input { font-size: 16px; padding: 10px 12px; } }
+
+/* atalhos por aparelho */
+.aparelhos { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; margin-top: 30px; }
+.aparelho { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 14px 8px 12px; background: #fff; border: 1px solid var(--linha); border-radius: 14px; color: var(--texto); transition: border-color .15s, transform .15s; }
+.aparelho:hover { border-color: var(--ciano); color: var(--azul-escuro); transform: translateY(-2px); }
+.ap-foto { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(ellipse at center, #93d4f0 0%, #25a9e0 100%); overflow: hidden; }
+.ap-foto img { width: 74px; height: 74px; object-fit: contain; }
+.ap-foto svg { width: 46px; height: 46px; }
+.ap-nome { font-weight: 700; font-size: 15px; line-height: 1.2; }
+.ap-qtd { font-size: 12.5px; color: var(--texto-2); }
+@media (prefers-reduced-motion: reduce) { .aparelho, .aparelho:hover { transition: none; transform: none; } }
+
+/* onde achar o modelo */
+.modelo-ajuda .container { display: grid; grid-template-columns: 1fr 300px; column-gap: 40px; align-items: start; }
+.modelo-ajuda .secao-titulo, .modelo-ajuda .intro, .modelo-ajuda .dicas { grid-column: 1; }
+.modelo-ajuda .intro { color: var(--texto-2); font-size: 17px; margin: -6px 0 18px; }
+.dicas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.dica { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--linha); border-radius: 12px; padding: 14px; }
+.dica img { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; background: var(--gelo); border-radius: 10px; padding: 4px; }
+.dica h3 { font-size: 16px; color: var(--azul-escuro); margin: 0 0 4px; }
+.dica p { font-size: 14.5px; color: var(--texto-2); margin: 0; }
+/* a etiqueta prateada de fábrica: o elemento que fica na memória */
+.etiqueta { grid-column: 2; grid-row: 1 / span 3; align-self: center; display: grid; gap: 6px; padding: 18px 20px 20px; border-radius: 8px; background: linear-gradient(135deg, #f4f6f8 0%, #d9dfe5 45%, #f1f3f5 60%, #c9d1d8 100%); border: 1px solid #b8c2cb; box-shadow: inset 0 1px 0 #fff, 0 10px 26px rgba(10, 30, 50, .12); font-family: 'Dande Narrow', var(--fonte); color: #37424b; transform: rotate(-2deg); }
+.et-marca { font-family: 'Futura PT', var(--fonte-titulo); font-weight: 700; letter-spacing: .06em; font-size: 20px; color: #24303a; border-bottom: 1px solid #aab4bd; padding-bottom: 6px; }
+.et-linha { font-size: 16px; }
+.et-linha b { background: #fff3a6; box-shadow: 0 0 0 3px #fff3a6; border-radius: 2px; color: #1d2730; }
+@media (max-width: 900px) { .modelo-ajuda .container { grid-template-columns: 1fr; } .etiqueta { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 18px; transform: rotate(-1deg); } .dicas { grid-template-columns: 1fr; } }
+
+/* banner da Dande em faixa */
+.banner-faixa { margin-top: 8px; }
+.banner-faixa .slider { border-radius: 14px; }
+
+/* passos (sequência real de compra) */
+.passos { list-style: none; counter-reset: passo; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.passos li { counter-increment: passo; position: relative; background: #fff; border: 1px solid var(--linha); border-radius: 12px; padding: 18px 18px 18px 66px; }
+.passos li::before { content: counter(passo); position: absolute; left: 18px; top: 18px; width: 34px; height: 34px; border-radius: 50%; background: var(--ciano); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 17px; }
+.passos h3 { font-size: 17px; color: var(--azul-escuro); margin: 4px 0 4px; }
+.passos p { margin: 0; color: var(--texto-2); font-size: 15px; }
+@media (max-width: 760px) { .passos { grid-template-columns: 1fr; } }
+
+/* dúvidas */
+.faq-secao { background: #fff; border-top: 1px solid var(--linha); }
+.faq-grade { display: grid; grid-template-columns: 1fr 2fr; gap: 32px; align-items: start; }
+.faq-grade h2 { color: var(--ciano); font-size: 30px; }
+.faq details { border-bottom: 1px solid var(--linha); }
+.faq summary { cursor: pointer; list-style: none; padding: 16px 36px 16px 0; font-weight: 700; font-size: 17px; color: var(--texto); position: relative; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: '+'; position: absolute; right: 6px; top: 12px; font-size: 24px; color: var(--ciano); font-weight: 400; }
+.faq details[open] summary::after { content: '−'; }
+.faq details p { margin: 0 0 16px; color: var(--texto-2); max-width: 68ch; }
+@media (max-width: 760px) { .faq-grade { grid-template-columns: 1fr; gap: 8px; } }
+
+/* sugestões da busca */
+.sugestoes { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--linha); border-radius: 14px; box-shadow: 0 14px 34px rgba(10, 30, 50, .16); z-index: 70; overflow: hidden; }
+.sugestoes a { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 8px 14px; color: var(--texto); font-size: 14.5px; }
+.sugestoes a:hover, .sugestoes a.ativo { background: #eef7fd; }
+.sugestoes img, .sugestoes .ph { width: 44px; height: 44px; object-fit: contain; border-radius: 6px; background: #fff; border: 1px solid var(--linha); }
+.sugestoes .preco { font-weight: 700; color: var(--azul-escuro); white-space: nowrap; }
+.sugestoes .todas { display: block; text-align: center; padding: 10px; border-top: 1px solid var(--linha); font-weight: 700; color: var(--azul-vivo); }
+.busca { position: relative; }
+
+/* selo de retirada nos cards */
+.selo-retira { background: #e6f4fb; color: #0b5d8f; }
+
+/* topo: texto + cartão da loja lado a lado */
+.boas-vindas .container { display: grid; grid-template-columns: minmax(0, 1fr) 300px; column-gap: 40px; align-items: start; }
+.boas-vindas .aparelhos { grid-column: 1 / -1; }
+.hoje-loja { background: #fff; border: 1px solid var(--linha); border-radius: 16px; padding: 20px; box-shadow: 0 8px 28px rgba(10, 78, 155, .08); margin-top: 8px; }
+.hl-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--texto-2); }
+.hl-status::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #9aa6b0; }
+.hl-status.aberta { color: var(--verde); } .hl-status.aberta::before { background: #19b347; box-shadow: 0 0 0 4px rgba(25, 179, 71, .18); }
+.hl-status.fechada { color: #8a5a00; } .hl-status.fechada::before { background: #e3a008; }
+.hl-titulo { font-size: 21px; font-weight: 700; color: var(--azul-escuro); margin: 10px 0 6px; line-height: 1.2; }
+.hl-texto { font-size: 15px; color: var(--texto-2); margin: 0 0 16px; }
+@media (max-width: 900px) { .boas-vindas .container { grid-template-columns: 1fr; } .hoje-loja { margin-top: 22px; } }
+
+/* cabeçalho sem quebrar linha */
+.menu-acoes a { white-space: nowrap; }
+@media (max-width: 1240px) { .menu-acoes .telefone { display: none; } }
+.secao-titulo a { text-transform: none; font-weight: 700; font-size: 15px; }
+.marcas-dande { grid-template-columns: 1fr 2fr; }
+@media (max-width: 760px) {
+  .marcas-dande { grid-template-columns: 1fr; }
+  .marcas-dande h2 { font-size: 24px; }
+  .grade-prod { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .card .info { padding: 10px; }
+  .card .preco { font-size: 19px; }
+  .boas-vindas .aparelhos { order: 2; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 22px; }
+  .boas-vindas .hoje-loja { order: 3; }
+  .ap-foto { width: 64px; height: 64px; } .ap-foto img { width: 56px; height: 56px; }
+  .ap-nome { font-size: 13.5px; }
+}

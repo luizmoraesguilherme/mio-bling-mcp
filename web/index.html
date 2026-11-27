@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dande Loja Online — Peças para geladeira, lavadora, tanquinho e micro-ondas</title>
-  <meta name="description" content="Peças para refrigeração, lavadoras, tanquinhos, micro-ondas, purificadores e filtros de água. Loja online da Dande, há mais de 20 anos em São José dos Campos. Envio e retirada na loja.">
+  <meta name="description" content="Encontre a peça do seu eletrodoméstico pelo nome, modelo ou código. Peças para geladeira, lavadora, tanquinho, micro-ondas e purificadores. Retire na loja em São José dos Campos ou receba em casa.">
   <meta property="og:title" content="Dande Loja Online — Peças para Refrigeração">
   <meta property="og:description" content="Peças para geladeira, lavadora, micro-ondas e purificadores com pronta entrega.">
   <meta name="theme-color" content="#0a4e9b">
@@ -14,27 +14,85 @@
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="home">
   <div id="cabecalho-slot"></div>
 
   <main>
-    <section class="slider" id="slider" aria-label="Destaques da Dande">
-      <div class="slides" id="slides"></div>
-      <button class="seta ant" id="ant" aria-label="Banner anterior">‹</button>
-      <button class="seta prox" id="prox" aria-label="Próximo banner">›</button>
-      <div class="pontos" id="pontos"></div>
+    <!-- 1. Boas-vindas: a pergunta do balcão -->
+    <section class="boas-vindas">
+      <div class="container">
+        <div class="bv-texto">
+          <h1>Qual aparelho parou de funcionar?</h1>
+          <p>Procure a peça pelo nome, pelo modelo do aparelho ou pelo código. Se ficar na dúvida, a gente confere com você antes da compra.</p>
+          <form class="busca-grande" action="/loja.html" role="search" autocomplete="off">
+            <label for="q-home" class="sr">O que você procura?</label>
+            <input id="q-home" name="q" type="search" placeholder="Ex.: damper Brastemp, BWL11, W10882241" data-sugestoes>
+            <button type="submit">Buscar peça</button>
+          </form>
+          <p class="bv-ajuda">Não sabe o nome da peça? <a id="whats-foto" href="#" target="_blank" rel="noopener">Mande uma foto no WhatsApp</a> e a gente encontra para você.</p>
+        </div>
+        <aside class="hoje-loja" aria-label="Situação da loja hoje">
+          <span class="hl-status" id="hl-status">Loja física</span>
+          <p class="hl-titulo" id="hl-titulo">Retire na Av. Andrômeda, 3358</p>
+          <p class="hl-texto" id="hl-texto">Seg a sex, 8h às 18h. Sáb, 8h às 12h.</p>
+          <a class="btn btn-whats btn-bloco" id="hl-whats" href="#" target="_blank" rel="noopener">Falar com o balcão</a>
+        </aside>
+        <nav class="aparelhos" id="aparelhos" aria-label="Escolha o aparelho"></nav>
+      </div>
     </section>
 
     <section id="pit" aria-label="Por que comprar com a gente"><div class="container" id="pit-itens"></div></section>
 
-    <section class="secao"><div class="container">
-      <div class="secao-titulo"><h2>Encontre por aparelho</h2><a href="/loja.html">Ver tudo</a></div>
-      <div class="grade-cat" id="grade-cat"><div class="esqueleto" style="grid-column:1/-1;min-height:170px"></div></div>
+    <!-- 2. Ajuda: onde fica o modelo -->
+    <section class="secao modelo-ajuda"><div class="container">
+      <div class="secao-titulo"><h2>Primeiro, ache o modelo do seu aparelho</h2></div>
+      <p class="intro">Com o modelo em mãos fica fácil achar a peça certa. Ele está numa etiqueta como esta:</p>
+      <div class="dicas">
+        <article class="dica">
+          <img src="/assets/cat-geladeiras.png" alt="" loading="lazy">
+          <div><h3>Geladeira e freezer</h3><p>Na parede interna, do lado esquerdo, perto da gaveta de legumes. Em alguns modelos fica atrás, embaixo.</p></div>
+        </article>
+        <article class="dica">
+          <img src="/assets/cat-lavadoras.png" alt="" loading="lazy">
+          <div><h3>Lavadora e tanquinho</h3><p>Na parte de trás do gabinete ou embaixo da tampa. Na lava e seca, na moldura da porta.</p></div>
+        </article>
+        <article class="dica">
+          <img src="/assets/cat-microondas.png" alt="" loading="lazy">
+          <div><h3>Micro-ondas</h3><p>Abrindo a porta, na lateral da moldura, ou na tampa de trás.</p></div>
+        </article>
+      </div>
+      <div class="etiqueta" aria-hidden="true">
+        <span class="et-marca">BRASTEMP</span>
+        <span class="et-linha">Modelo <b>BWK11AB</b></span>
+        <span class="et-linha">Nº série JB5412345</span>
+        <span class="et-linha">127 V ~ 60 Hz</span>
+      </div>
     </div></section>
 
+    <!-- 3. Peças mais procuradas -->
     <section class="secao" style="padding-top:0"><div class="container">
-      <div class="secao-titulo"><h2>Destaques</h2><a href="/loja.html">Ver mais</a></div>
-      <div class="grade-prod" id="destaques"></div>
+      <div class="secao-titulo"><h2>Peças mais procuradas</h2><a href="/loja.html">Ver todas</a></div>
+      <div class="grade-prod" id="destaques"><div class="esqueleto" style="grid-column:1/-1"></div></div>
+    </div></section>
+
+    <!-- 4. Banner da Dande -->
+    <section class="container banner-faixa">
+      <div class="slider" id="slider" aria-label="Novidades da Dande">
+        <div class="slides" id="slides"></div>
+        <button class="seta ant" id="ant" aria-label="Banner anterior">‹</button>
+        <button class="seta prox" id="prox" aria-label="Próximo banner">›</button>
+        <div class="pontos" id="pontos"></div>
+      </div>
+    </section>
+
+    <!-- 5. Como comprar (sequência real) -->
+    <section class="secao"><div class="container">
+      <div class="secao-titulo"><h2>Como comprar</h2></div>
+      <ol class="passos">
+        <li><h3>Escolha a peça</h3><p>Busque pelo modelo do aparelho. Na dúvida, pergunte no WhatsApp antes de pagar.</p></li>
+        <li><h3>Pague do seu jeito</h3><p>Pix, cartão de crédito ou boleto, no ambiente seguro do Mercado Pago.</p></li>
+        <li><h3>Retire ou receba</h3><p>Retire grátis na loja da Av. Andrômeda ou receba em casa em São José dos Campos.</p></li>
+      </ol>
     </div></section>
 
     <section class="secao" style="padding-top:0"><div class="container marcas-dande">
@@ -47,15 +105,38 @@
       </div>
     </div></section>
 
+    <!-- 6. Perguntas frequentes -->
+    <section class="secao faq-secao"><div class="container faq-grade">
+      <h2>Dúvidas de quem está comprando</h2>
+      <div class="faq">
+        <details>
+          <summary>Como sei se a peça serve no meu aparelho?</summary>
+          <p>Confira o modelo na etiqueta do aparelho e procure por ele aqui. A descrição de cada peça lista os modelos compatíveis. Se ainda ficar em dúvida, mande o modelo ou uma foto no WhatsApp que a gente confirma.</p>
+        </details>
+        <details>
+          <summary>Posso retirar no mesmo dia?</summary>
+          <p>Sim. Escolha “Retirar na loja” no carrinho. Com o pagamento aprovado, a peça fica separada e você retira no horário de atendimento, com estacionamento no local.</p>
+        </details>
+        <details>
+          <summary>E se a peça não servir?</summary>
+          <p>Você tem 7 dias depois de receber para desistir da compra, desde que a peça não tenha sido instalada. Se chegou errada ou com defeito, a troca é por nossa conta.</p>
+        </details>
+        <details>
+          <summary>Vocês entregam fora de São José dos Campos?</summary>
+          <p>Ao informar o CEP no carrinho você vê as opções disponíveis para o seu endereço. Se não aparecer envio para sua cidade, chame no WhatsApp que a gente combina.</p>
+        </details>
+      </div>
+    </div></section>
+
     <section class="secao loja-fisica"><div class="container">
       <div>
-        <h2>Prefere retirar no balcão?</h2>
-        <p>Compre aqui e retire na nossa loja em São José dos Campos, sem pagar frete. Nossa equipe confere a peça com você na hora.</p>
+        <h2>Prefere vir até a loja?</h2>
+        <p>Traga a peça velha ou uma foto da etiqueta: nossa equipe confere com você no balcão.</p>
         <p id="end-loja" style="font-weight:700"></p>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <a class="btn btn-primario" href="https://maps.google.com/?q=Av.+Andr%C3%B4meda,+3358,+S%C3%A3o+Jos%C3%A9+dos+Campos" target="_blank" rel="noopener">Como chegar</a>
-        <a class="btn btn-whats" id="whats-loja" href="#" target="_blank" rel="noopener">Tirar dúvida sobre compatibilidade</a>
+        <a class="btn btn-whats" id="whats-loja" href="#" target="_blank" rel="noopener">Falar no WhatsApp</a>
       </div>
     </div></section>
   </main>
@@ -66,39 +147,60 @@
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       const { api, cardProduto, categorias, catIcone, linkWhats, esc, cfg } = window.Mio;
-            document.getElementById('whats-loja').href = linkWhats('Olá! Quero confirmar se uma peça serve no meu aparelho.');
-      document.getElementById('end-loja').textContent = `${cfg.endereco} · ${cfg.cidade} · ${cfg.horario}`;
+      document.getElementById('whats-foto').href = linkWhats('Olá! Vou mandar a foto de uma peça que preciso. Vocês têm?');
+      document.getElementById('whats-loja').href = linkWhats('Olá! Quero tirar uma dúvida sobre uma peça.');
+      // Cartão "Hoje na loja": aberta agora? (horário de São Paulo)
+      (() => {
+        const agora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        const d = agora.getDay(), h = agora.getHours() + agora.getMinutes() / 60;
+        const fecha = d >= 1 && d <= 5 ? 18 : d === 6 ? 12 : null;
+        const aberta = fecha !== null && h >= 8 && h < fecha;
+        const st = document.getElementById('hl-status');
+        st.textContent = aberta ? `Aberta agora, até ${fecha}h` : 'Fechada agora';
+        st.classList.add(aberta ? 'aberta' : 'fechada');
+        const prox = d !== 0 && h < 8 ? 'hoje, às 8h' : (d === 6 || d === 0) ? 'segunda, às 8h' : d === 5 ? 'sábado, às 8h' : 'amanhã, às 8h';
+        document.getElementById('hl-titulo').textContent = aberta ? 'Compre agora e retire hoje' : `Abrimos ${prox}`;
+        document.getElementById('hl-texto').textContent = aberta ? 'Pagou, separamos a peça. É só passar na Av. Andrômeda, 3358, com estacionamento.' : 'Faça o pedido agora: a peça fica separada para você retirar quando abrirmos.';
+        document.getElementById('hl-whats').href = linkWhats('Olá! Quero tirar uma dúvida antes de comprar.');
+      })();
+      document.getElementById('end-loja').textContent = `${cfg.endereco}, ${cfg.cidade}. ${cfg.horario}.`;
 
-      // Banner rotativo com as artes da Dande (versão quadrada no celular)
-      const ban = [1, 2, 3, 4];
-      document.getElementById('slides').innerHTML = ban.map((n) => `<picture><source media="(max-width: 640px)" srcset="/assets/banner-m-${n}.jpg"><img src="/assets/banner-${n}.jpg" alt="Passa na Dande! As melhores peças para refrigeração você encontra aqui" ${n > 1 ? 'loading="lazy"' : ''} width="1920" height="500"></picture>`).join('');
-      const pontos = document.getElementById('pontos');
-      pontos.innerHTML = ban.map((n, i) => `<button aria-label="Banner ${n}" class="${i ? '' : 'ativo'}"></button>`).join('');
-      let atual = 0, timer;
-      const ir = (i) => { atual = (i + ban.length) % ban.length; document.getElementById('slides').style.transform = `translateX(-${atual * 100}%)`; [...pontos.children].forEach((b, k) => b.classList.toggle('ativo', k === atual)); clearInterval(timer); timer = setInterval(() => ir(atual + 1), 6000); };
-      pontos.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) ir([...pontos.children].indexOf(b)); });
-      document.getElementById('ant').onclick = () => ir(atual - 1);
-      document.getElementById('prox').onclick = () => ir(atual + 1);
-      ir(0);
-
-      const pit = [['20anos', '20 anos de mercado'], ['rapido', 'Atendimento rápido'], ['marcas', 'Grandes marcas'], ['entrega', 'Peças a pronta entrega'], ['estacionamento', 'Retire na loja: temos estacionamento']];
+      const pit = [['20anos', 'Há 20 anos no mercado'], ['rapido', 'Atendimento rápido'], ['marcas', 'Grandes marcas'], ['entrega', 'Peças a pronta entrega'], ['estacionamento', 'Retire na loja: temos estacionamento']];
       document.getElementById('pit-itens').innerHTML = pit.map(([i, t]) => `<div class="item"><img src="/assets/pit-${i}.png" alt="" width="38" height="38"><span>${t}</span></div>`).join('');
 
-      const cats = await categorias();
-      const mostrar = cats.filter((c) => c.total > 0);
-      const lista = (mostrar.length >= 4 ? mostrar : cats.filter((c) => c.slug !== 'outros')).slice(0, 8);
+      // Atalhos por aparelho com as fotos da Dande
       const comFoto = new Set(['geladeiras', 'lavadoras', 'secadoras', 'tanquinhos', 'microondas', 'ar-condicionado', 'filtros', 'lava-loucas']);
-      document.getElementById('grade-cat').innerHTML = lista.map((c) => `
-        <a class="cat" href="/loja.html?cat=${c.slug}">
-          <h3>${esc(c.nome)}</h3><span class="btn-produto">Peças</span>${comFoto.has(c.slug) ? `<img class="foto-cat" src="/assets/cat-${c.slug}.png" alt="" loading="lazy">` : `<span class="ico-cat">${catIcone[c.slug] || catIcone.outros}</span>`}
+      const curto = { geladeiras: 'Geladeira', lavadoras: 'Lavadora', secadoras: 'Secadora', tanquinhos: 'Tanquinho', microondas: 'Micro-ondas', 'ar-condicionado': 'Ar-condicionado', filtros: 'Purificador e filtro', 'lava-loucas': 'Lava-louças', ferramentas: 'Ferramentas', outros: 'Outras peças' };
+      const cats = await categorias();
+      const comItens = cats.filter((c) => c.total > 0);
+      const lista = (comItens.length >= 4 ? comItens : cats.filter((c) => comFoto.has(c.slug)));
+      document.getElementById('aparelhos').innerHTML = lista.map((c) => `
+        <a class="aparelho" href="/loja.html?cat=${c.slug}">
+          <span class="ap-foto">${comFoto.has(c.slug) ? `<img src="/assets/cat-${c.slug}.png" alt="" width="96" height="96">` : (catIcone[c.slug] || catIcone.outros)}</span>
+          <span class="ap-nome">${esc(curto[c.slug] || c.nome)}</span>
+          ${c.total ? `<span class="ap-qtd">${c.total} ${c.total === 1 ? 'peça' : 'peças'}</span>` : ''}
         </a>`).join('');
 
       const alvo = document.getElementById('destaques');
       try {
         let r = await api('/api/produtos?destaque=1&limite=8');
         if (!r.itens.length) r = await api('/api/produtos?limite=8');
-        alvo.innerHTML = r.itens.length ? r.itens.map(cardProduto).join('') : '<div class="vazio" style="grid-column:1/-1">Estamos preparando o catálogo. Enquanto isso, fale com a gente pelo WhatsApp.</div>';
-      } catch { alvo.innerHTML = '<div class="vazio" style="grid-column:1/-1">Não foi possível carregar os produtos agora.</div>'; }
+        alvo.innerHTML = r.itens.length ? r.itens.map(cardProduto).join('')
+          : `<div class="vazio" style="grid-column:1/-1">Estamos colocando as peças no site agora. Enquanto isso, <a href="${linkWhats('Olá! Procuro uma peça.')}" target="_blank" rel="noopener">fale com a gente no WhatsApp</a> que a gente separa para você.</div>`;
+      } catch { alvo.innerHTML = '<div class="vazio" style="grid-column:1/-1">Não deu para carregar as peças agora. Atualize a página em instantes.</div>'; }
+
+      // Banner da Dande (versão quadrada no celular)
+      const ban = [1, 2, 3, 4];
+      document.getElementById('slides').innerHTML = ban.map((n) => `<picture><source media="(max-width: 640px)" srcset="/assets/banner-m-${n}.jpg"><img src="/assets/banner-${n}.jpg" alt="Passa na Dande! As melhores peças para refrigeração você encontra aqui" loading="lazy" width="1920" height="500"></picture>`).join('');
+      const pontos = document.getElementById('pontos');
+      pontos.innerHTML = ban.map((n, i) => `<button aria-label="Banner ${n}" class="${i ? '' : 'ativo'}"></button>`).join('');
+      const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let atual = 0, timer;
+      const ir = (i) => { atual = (i + ban.length) % ban.length; document.getElementById('slides').style.transform = `translateX(-${atual * 100}%)`; [...pontos.children].forEach((b, k) => b.classList.toggle('ativo', k === atual)); clearInterval(timer); if (!reduzido) timer = setInterval(() => ir(atual + 1), 7000); };
+      pontos.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) ir([...pontos.children].indexOf(b)); });
+      document.getElementById('ant').onclick = () => ir(atual - 1);
+      document.getElementById('prox').onclick = () => ir(atual + 1);
+      ir(0);
     });
   </script>
 </body>
