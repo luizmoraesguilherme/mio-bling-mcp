@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS produtos (
   sync_em TEXT,
   -- campos da loja (não vêm do Bling)
   publicado INTEGER DEFAULT 0, destaque INTEGER DEFAULT 0,
-  categoria_site TEXT, titulo_site TEXT
+  categoria_site TEXT, titulo_site TEXT, categoria_manual INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_prod_pub ON produtos(publicado, categoria_site);
 CREATE TABLE IF NOT EXISTS pedidos (
@@ -150,6 +150,9 @@ CREATE TABLE IF NOT EXISTS eventos (
 );
 `);
 
+
+// Migração: bancos criados antes da coluna categoria_manual.
+try { db.exec('ALTER TABLE produtos ADD COLUMN categoria_manual INTEGER DEFAULT 0'); } catch { /* já existe */ }
 const agora = () => new Date().toISOString();
 const kvGet = (k) => { const r = db.prepare('SELECT v FROM kv WHERE k=?').get(k); return r ? JSON.parse(r.v) : null; };
 const kvSet = (k, v) => db.prepare('INSERT INTO kv(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').run(k, JSON.stringify(v));
@@ -162,22 +165,32 @@ function evento(tipo, dados = {}) {
 // Categorias do site (identidade da Dande) e classificação automática
 // ---------------------------------------------------------------------------
 const CATEGORIAS = [
-  { slug: 'geladeiras', nome: 'Geladeiras e Freezers', chaves: ['geladeira', 'refrigerador', 'freezer', 'frost', 'degelo', 'gaveta', 'prateleira', 'termostato', 'guarnicao', 'gaxeta', 'antiodor', 'damper', 'evaporador', 'compressor', 'refrigeracao', 'bia'] },
-  { slug: 'lavadoras', nome: 'Lavadoras', chaves: ['lavadora', 'maquina de lavar', 'tirante', 'agitador', 'atuador', 'pressostato', 'cesto', 'tanque', 'lava e seca', 'mecanismo', 'transmissao', 'correia', 'rolamento', 'retentor', 'suspensao', 'eletrovalvula', 'valvula', 'bomba', 'lavar'] },
-  { slug: 'secadoras', nome: 'Secadoras', chaves: ['secadora', 'secar', 'centrifuga'] },
-  { slug: 'tanquinhos', nome: 'Tanquinhos', chaves: ['tanquinho', 'tanquinhos'] },
+  { slug: 'geladeiras', nome: 'Geladeiras e Freezers', chaves: ['geladeira', 'refrigerador', 'freezer', 'frost', 'degelo', 'gaveta', 'prateleira', 'termostato', 'guarnicao', 'gaxeta', 'antiodor', 'damper', 'evaporador', 'refrigeracao', 'forma de gelo', 'forma gelo', 'congelador', 'side by side', 'fusivel termico', 'sensor 2,7k', 'motor ventilador original', 'duto', 'lampada led', 'capa difusor', 'dobradica freezer', 'capa traseira', 'cesto intermediario', 'interruptor duplo', ' dff '] },
+  { slug: 'secadoras', nome: 'Secadoras', chaves: ['secadora', 'roldana tambor', 'antepara'] },
+  { slug: 'tanquinhos', nome: 'Tanquinhos', chaves: ['tanquinho'] },
+  { slug: 'lavadoras', nome: 'Lavadoras', chaves: ['lavadora', 'maquina de lavar', 'lava e seca', 'tirante', 'agitador', 'atuador', 'pressostato', 'cesto', 'tanque', 'mecanismo', 'transmissao', 'correia', 'rolamento', 'retentor', 'suspensao', 'eletrovalvula', 'valvula de entrada', 'bomba drenagem', 'tira manchas', 'eixo', 'solenoide', 'mola do freio', 'freio', 'nivelador', 'caixa engrenagem', 'came', 'amortecedor', 'mondial', 'thormac', 'burdog', 'colormaq', 'molas cesto', 'filtro bomba'] },
   { slug: 'microondas', nome: 'Micro-ondas', chaves: ['microondas', 'micro-ondas', 'micro ondas', 'membrana', 'tinta epson', 'tinta branca', 'magnetron', 'prato giratorio'] },
-  { slug: 'ar-condicionado', nome: 'Ar-condicionado', chaves: ['ar condicionado', 'ar-condicionado', 'split', 'capacitor'] },
-  { slug: 'filtros', nome: 'Filtros e Purificadores', chaves: ['filtro', 'refil', 'purificador', 'bebedouro', 'adaptador mangueira', 'agua'] },
+  { slug: 'ar-condicionado', nome: 'Ar-condicionado', chaves: ['ar condicionado', 'ar-condicionado', 'split', 'capacitor', 'placa universal ac'] },
+  { slug: 'filtros', nome: 'Filtros e Purificadores', chaves: ['refil', 'purificador', 'bebedouro', 'adaptador mangueira', 'filtro de agua', 'planeta agua'] },
   { slug: 'lava-loucas', nome: 'Lava-louças', chaves: ['lava louca', 'lava-louca', 'lava loucas', 'lava-loucas'] },
-  { slug: 'ferramentas', nome: 'Ferramentas e Acessórios', chaves: ['chave', 'alicate', 'dobrador', 'graxa', 'anticorrosivo', 'limpeza', 'tablete', 'pastilha', 'ferramenta', 'kit instalacao'] },
+  { slug: 'ferramentas', nome: 'Ferramentas e Acessórios', chaves: ['chave', 'alicate', 'dobrador', 'curvador', 'graxa', 'anticorrosivo', 'limpeza', 'tablete', 'pastilha', 'ferramenta', 'kit instalacao', 'manifold', 'cortador', 'escareador', 'alargador', 'serra copo', 'engate rapido', 'fita', 'filmex', 'luva rosca', 'termometro', 'oleo', 'desengripante', 'alumax', 'solda', 'terminal bateria', 'espuma limpadora', 'controle remoto', 'schrader', 'rabicho'] },
   { slug: 'outros', nome: 'Outras peças', chaves: [] },
 ];
 const CAT_SLUGS = new Set(CATEGORIAS.map((c) => c.slug));
-const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const semAcento = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+// Códigos de modelo (BWL11, CWH12, LTE12, BRE80, DFF…) dizem o aparelho mesmo sem a palavra.
+const MODELOS = [
+  ['secadoras', /\b(bs[ircx]\d{2})/],
+  ['lavadoras', /\b(bw[a-z]\d{2}|cw[a-z]\d{2}|lte?\d{2}|lt\d{2}f|lca\d{2}|lm\d{2}|lbu\d{2}|ltr\d{2}|ltc\d{2}|lac\d{2})/],
+  ['geladeiras', /\b(br[emo]\d{2}|crb\d{2}|crm\d{2}|dff\d{2}|df\d{2}|re\d{2}|rde\d{2}|tf\d{2}|it\d{2}|ss72)/],
+  ['microondas', /\b(bms\d{2}|cms\d{2}|me\d{2}[a-z])/],
+];
 function sugerirCategoria(nome) {
   const n = semAcento(nome);
   for (const c of CATEGORIAS) if (c.chaves.some((k) => n.includes(k))) return c.slug;
+  for (const [slug, re] of MODELOS) if (re.test(n)) return slug;
+  if (/\bplaca\b/.test(n) && /\b(lavadora|lte|lt12|bwc|cwl|blf)/.test(n)) return 'lavadoras';
+  if (/\bfiltro\b/.test(n)) return 'filtros';
   return 'outros';
 }
 function slugify(s) {
@@ -340,6 +353,7 @@ async function sincronizar({ completo = false } = {}) {
         if (existe) {
           db.prepare('UPDATE produtos SET codigo=?, nome=?, preco=?, estoque=?, situacao=?, formato=?, sync_em=? WHERE id=?')
             .run(p.codigo || '', p.nome, preco, estoque, p.situacao || 'A', p.formato || 'S', agora(), p.id);
+          db.prepare('UPDATE produtos SET categoria_site=? WHERE id=? AND categoria_manual=0').run(sugerirCategoria(p.nome), p.id);
         } else {
           db.prepare(`INSERT INTO produtos(id,codigo,nome,slug,preco,estoque,situacao,formato,categoria_site,sync_em)
             VALUES(?,?,?,?,?,?,?,?,?,?)`).run(p.id, p.codigo || '', p.nome, slugUnico(p.nome, p.id), preco, estoque,
@@ -810,6 +824,7 @@ async function rotear(req, res, url) {
     if (b.publicado === true && problemas(prod).bloq.length) throw httpErro(409, `Não dá para publicar: ${problemas(prod).bloq.join(', ')}.`);
     if (b.categoria_site !== undefined && !CAT_SLUGS.has(b.categoria_site)) throw httpErro(400, 'Categoria inválida.');
     const titulo = b.titulo_site === undefined ? prod.titulo_site : (String(b.titulo_site || '').trim().slice(0, 120) || null);
+    if (b.categoria_site !== undefined && b.categoria_site !== prod.categoria_site) db.prepare('UPDATE produtos SET categoria_manual=1 WHERE id=?').run(id);
     db.prepare('UPDATE produtos SET publicado=?, destaque=?, categoria_site=?, titulo_site=? WHERE id=?').run(
       b.publicado === undefined ? prod.publicado : (b.publicado ? 1 : 0), b.destaque === undefined ? prod.destaque : (b.destaque ? 1 : 0),
       b.categoria_site ?? prod.categoria_site, titulo, id);
@@ -887,6 +902,8 @@ setInterval(() => {
 if (require.main === module) {
   server.listen(CFG.port, () => console.log(`mio-loja API na porta ${CFG.port}`));
   espelharAssets().catch((e) => console.warn('[asset]', e.message));
+  // Reaplica a classificação automática (mantém o que foi escolhido à mão no painel).
+  for (const r of db.prepare('SELECT id, nome FROM produtos WHERE categoria_manual=0').all()) db.prepare('UPDATE produtos SET categoria_site=? WHERE id=?').run(sugerirCategoria(r.nome), r.id);
   if (tokens?.refresh_token) setTimeout(() => sincronizar(), 5000);
 }
 module.exports = { server, db, CFG, sugerirCategoria, problemas, cpfValido, limparHtml };
