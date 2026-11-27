@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Produto | Mio Peça</title>
+  <meta name="description" content="Peças para eletrodomésticos com pronta entrega. Loja online da Dande.">
+  <meta name="theme-color" content="#0a4e9b">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="cabecalho-slot"></div>
+  <main class="container" id="conteudo">
+    <div class="esqueleto" style="margin-top:24px;min-height:460px"></div>
+  </main>
+  <div id="rodape-slot"></div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { api, qs, esc, brl, ic, Carrinho, cardProduto, categorias, toast, linkWhats } = window.Mio;
+      const alvo = document.getElementById('conteudo');
+      let p;
+      try { p = await api('/api/produtos/' + encodeURIComponent(qs('p') || '')); }
+      catch (e) { alvo.innerHTML = `<div class="vazio" style="margin-top:24px"><p>Produto não encontrado ou indisponível.</p><a class="btn" href="/loja.html">Ver catálogo</a></div>`; return; }
+      document.title = `${p.nome} | Mio Peça`;
+      document.querySelector('meta[name=description]').content = `${p.nome}. Compre online na Mio Peça, loja da Dande em São José dos Campos.`;
+      const cats = await categorias();
+      const cat = cats.find((c) => c.slug === p.categoria);
+
+      // Dados estruturados para o Google
+      const ld = document.createElement('script'); ld.type = 'application/ld+json';
+      ld.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: p.nome, sku: p.codigo, gtin13: p.gtin || undefined, brand: p.marca ? { '@type': 'Brand', name: p.marca } : undefined, image: p.imagens.map((i) => location.origin + i), offers: { '@type': 'Offer', priceCurrency: 'BRL', price: p.preco, availability: p.disponivel ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' } });
+      document.head.appendChild(ld);
+
+      const imgs = p.imagens.length ? p.imagens : [null];
+      alvo.innerHTML = `
+        <nav class="migalha"><a href="/">Início</a> › ${cat ? `<a href="/loja.html?cat=${cat.slug}">${esc(cat.nome)}</a> › ` : ''}<span>${esc(p.nome)}</span></nav>
+        <section class="produto">
+          <div class="galeria">
+            <div class="principal">${imgs[0] ? `<img id="foto" src="${esc(imgs[0])}" alt="${esc(p.nome)}">` : `<span class="sem-foto">${ic.foto}</span>`}</div>
+            ${imgs.length > 1 ? `<div class="miniaturas">${imgs.map((i, n) => `<button class="${n ? '' : 'ativo'}" data-i="${esc(i)}" aria-label="Foto ${n + 1}"><img src="${esc(i)}" alt=""></button>`).join('')}</div>` : ''}
+          </div>
+          <div>
+            <h1>${esc(p.nome)}</h1>
+            <div class="cod">${p.marca ? `Marca: ${esc(p.marca)} · ` : ''}Cód.: ${esc(p.codigo || p.id)}</div>
+            <div class="preco-grande">${brl(p.preco)}</div>
+            <div class="condicoes">Pix, cartão de crédito ou boleto pelo Mercado Pago</div>
+            ${p.disponivel ? `<span class="selo selo-ok">Em estoque</span>` : `<span class="selo selo-esgotado">Esgotado</span>`}
+            ${p.disponivel ? `
+            <div class="qtd-linha">
+              <div class="qtd-ctrl"><button type="button" id="menos" aria-label="Diminuir">−</button><input id="qtd" type="number" min="1" max="${p.estoque}" value="1" aria-label="Quantidade"><button type="button" id="mais" aria-label="Aumentar">+</button></div>
+              <button class="btn btn-comprar" id="comprar">Comprar</button>
+              <button class="btn" id="add">Adicionar ao carrinho</button>
+            </div>` : `<p><a class="btn btn-whats" target="_blank" rel="noopener" href="${linkWhats(`Olá! Quero saber quando chega: ${p.nome} (cód. ${p.codigo})`)}">Avise-me pelo WhatsApp</a></p>`}
+            <div>
+              <label for="cep" style="font-size:14px;font-weight:700;color:var(--texto-2)">Calcular frete</label>
+              <div class="frete-calc"><input id="cep" inputmode="numeric" placeholder="00000-000" maxlength="9"><button class="btn btn-pequeno" id="calc">Calcular</button></div>
+              <div class="frete-res" id="frete-res"></div>
+            </div>
+            <ul class="garantias">
+              <li>${ic.escudo}<span>Compra segura: o pagamento é processado pelo Mercado Pago.</span></li>
+              <li>${ic.loja}<span>Retire grátis na loja em São José dos Campos.</span></li>
+              <li>${ic.check}<span>Dúvida se serve no seu aparelho? <a target="_blank" rel="noopener" href="${linkWhats(`Olá! Essa peça serve no meu aparelho? ${p.nome} (cód. ${p.codigo})`)}">Pergunte no WhatsApp</a> antes de comprar.</span></li>
+            </ul>
+          </div>
+        </section>
+        <section class="descricao"><h2>Descrição</h2><div class="texto">${p.descricao || '<p>Sem descrição.</p>'}</div></section>
+        ${p.relacionados.length ? `<section class="secao"><div class="secao-titulo"><h2>Veja também</h2></div><div class="grade-prod">${p.relacionados.map(cardProduto).join('')}</div></section>` : ''}`;
+
+      alvo.querySelector('.miniaturas')?.addEventListener('click', (e) => {
+        const b = e.target.closest('button'); if (!b) return;
+        document.getElementById('foto').src = b.dataset.i;
+        alvo.querySelectorAll('.miniaturas button').forEach((x) => x.classList.toggle('ativo', x === b));
+      });
+      const qtd = document.getElementById('qtd');
+      const limitar = (v) => Math.max(1, Math.min(p.estoque, Number(v) || 1));
+      document.getElementById('menos')?.addEventListener('click', () => { qtd.value = limitar(Number(qtd.value) - 1); });
+      document.getElementById('mais')?.addEventListener('click', () => { qtd.value = limitar(Number(qtd.value) + 1); });
+      qtd?.addEventListener('change', () => { qtd.value = limitar(qtd.value); });
+      document.getElementById('add')?.addEventListener('click', () => { Carrinho.adicionar(p, limitar(qtd.value)); toast('Adicionado ao carrinho'); });
+      document.getElementById('comprar')?.addEventListener('click', () => { Carrinho.adicionar(p, limitar(qtd.value)); location = '/carrinho.html'; });
+
+      const cep = document.getElementById('cep');
+      cep.addEventListener('input', () => { const d = cep.value.replace(/\D/g, '').slice(0, 8); cep.value = d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d; });
+      document.getElementById('calc').addEventListener('click', async () => {
+        const res = document.getElementById('frete-res');
+        res.textContent = 'Calculando…';
+        try {
+          const ops = await api('/api/frete', { method: 'POST', body: { cep: cep.value, itens: [{ id: p.id, qtd: limitar(qtd?.value || 1) }] } });
+          res.innerHTML = ops.map((o) => `<div><b>${o.valor ? brl(o.valor) : 'Grátis'}</b> · ${esc(o.nome)} <span style="color:var(--texto-2)">(${esc(o.prazo)})</span></div>`).join('') +
+            (ops.some((o) => o.tipo !== 'retirada') ? '' : `<div style="color:var(--texto-2)">Para outras cidades, <a target="_blank" rel="noopener" href="${linkWhats(`Olá! Quanto fica o envio de ${p.nome} para o CEP ${cep.value}?`)}">consulte o envio no WhatsApp</a>.</div>`);
+        } catch (e) { res.textContent = e.message; }
+      });
+    });
+  </script>
+</body>
+</html>

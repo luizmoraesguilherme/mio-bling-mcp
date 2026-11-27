@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 228 60" role="img" aria-label="Mio Peça">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#337db9"/>
+      <stop offset="1" stop-color="#0a4e9b"/>
+    </linearGradient>
+  </defs>
+  <!-- engrenagem estilizada com floco: peças para refrigeração e lavanderia -->
+  <g transform="translate(30 30)">
+    <circle r="26" fill="url(#g)"/>
+    <g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round">
+      <path d="M0-15V15M-13-7.5 13 7.5M-13 7.5 13-7.5"/>
+      <path d="M-4-11 0-15 4-11M-4 11 0 15 4 11"/>
+    </g>
+    <circle r="5.2" fill="#25aae1" stroke="#fff" stroke-width="2.4"/>
+  </g>
+  <text x="66" y="34" font-family="Jost, 'PT Sans', Arial, sans-serif" font-size="30" font-weight="700" fill="#0a4e9b" letter-spacing="-0.5">mio<tspan fill="#25aae1"> peça</tspan></text>
+  <text x="67" y="51" font-family="'PT Sans', Arial, sans-serif" font-size="11" fill="#727272" letter-spacing="1.6">LOJA ONLINE DA DANDE</text>
+</svg>

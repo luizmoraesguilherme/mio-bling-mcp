@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Peças | Mio Peça</title>
+  <meta name="description" content="Catálogo de peças para geladeira, lavadora, micro-ondas, purificadores e mais. Loja online da Dande.">
+  <meta name="theme-color" content="#0a4e9b">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="cabecalho-slot"></div>
+  <main class="container secao" style="padding-top:28px">
+    <div class="lista-topo">
+      <div>
+        <h1 id="titulo">Todas as peças</h1>
+        <span id="contagem" style="color:var(--texto-2);font-size:14px"></span>
+      </div>
+      <label>
+        <span class="sr">Ordenar</span>
+        <select id="ordem">
+          <option value="">Relevância</option>
+          <option value="menor">Menor preço</option>
+          <option value="maior">Maior preço</option>
+          <option value="nome">Nome (A–Z)</option>
+        </select>
+      </label>
+    </div>
+    <div class="grade-prod" id="grade"></div>
+    <div class="paginacao" id="paginacao"></div>
+  </main>
+  <div id="rodape-slot"></div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { api, qs, esc, cardProduto, categorias, linkWhats } = window.Mio;
+      const cat = qs('cat') || '', q = qs('q') || '';
+      const sel = document.getElementById('ordem');
+      sel.value = qs('ordem') || '';
+      sel.addEventListener('change', () => { const u = new URL(location); sel.value ? u.searchParams.set('ordem', sel.value) : u.searchParams.delete('ordem'); u.searchParams.delete('pagina'); location = u; });
+
+      const cats = await categorias();
+      const nomeCat = cats.find((c) => c.slug === cat)?.nome;
+      const titulo = q ? `Resultados para “${q}”` : (nomeCat || 'Todas as peças');
+      document.getElementById('titulo').textContent = titulo;
+      document.title = `${titulo} | Mio Peça`;
+
+      const grade = document.getElementById('grade');
+      grade.innerHTML = '<div class="esqueleto" style="grid-column:1/-1"></div>';
+      const pagina = Number(qs('pagina') || 1);
+      const p = new URLSearchParams({ pagina, limite: 24 });
+      if (cat) p.set('cat', cat); if (q) p.set('q', q); if (qs('ordem')) p.set('ordem', qs('ordem'));
+      try {
+        const r = await api('/api/produtos?' + p);
+        document.getElementById('contagem').textContent = `${r.total} ${r.total === 1 ? 'produto' : 'produtos'}`;
+        if (!r.itens.length) {
+          grade.innerHTML = `<div class="vazio" style="grid-column:1/-1">
+            <p style="margin-top:0">Nenhuma peça encontrada${q ? ` para “${esc(q)}”` : ''}.</p>
+            <p>Temos muito mais no balcão da loja. Mande o modelo do aparelho que a gente procura para você.</p>
+            <a class="btn btn-whats" target="_blank" rel="noopener" href="${linkWhats(`Olá! Procuro uma peça${q ? `: ${q}` : ''}.`)}">Pedir pelo WhatsApp</a></div>`;
+          return;
+        }
+        grade.innerHTML = r.itens.map(cardProduto).join('');
+        const paginas = Math.ceil(r.total / 24);
+        if (paginas > 1) {
+          const pag = document.getElementById('paginacao');
+          pag.innerHTML = Array.from({ length: paginas }, (_, i) => `<button class="${i + 1 === pagina ? 'ativo' : ''}" data-p="${i + 1}" aria-label="Página ${i + 1}">${i + 1}</button>`).join('');
+          pag.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const u = new URL(location); u.searchParams.set('pagina', b.dataset.p); location = u; });
+        }
+      } catch (e) { grade.innerHTML = `<div class="vazio" style="grid-column:1/-1">${esc(e.message)}</div>`; }
+    });
+  </script>
+</body>
+</html>
